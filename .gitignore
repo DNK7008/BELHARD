@@ -1,0 +1,7 @@
+# Служебные файлы Windows и macOS
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Локальные настройки редакторов (кроме общих настроек проекта)
+.vscode/*.log
