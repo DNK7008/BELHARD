@@ -1,0 +1,2500 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Дорога домой — 8-битная игра про кошку Лапку</title>
+<meta name="description" content="Ретро-платформер в духе старых приставок: кошка Лапка выбралась из коробки в лесу и ищет дорогу домой, где её ждёт Соня.">
+<meta name="theme-color" content="#110f14">
+<!-- Значок вкладки нарисован прямо здесь, чтобы не нужен был отдельный файл -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%88%3C/text%3E%3C/svg%3E">
+<style>
+  /* Страница — «тёмная комната», в центре стоит старый телевизор с игрой */
+  * { box-sizing: border-box; }
+  html { height: 100%; }
+  body {
+    margin: 0;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 16px;
+    background: radial-gradient(ellipse at 50% 35%, #2b2430 0%, #141117 55%, #0a090c 100%);
+    color: #b9ae9c;
+    font: 14px/1.5 "Courier New", Courier, monospace;
+  }
+
+  /* Корпус телевизора. Экран = корпус минус поля: 960 − 2 × 30 = 900 px в ширину.
+     На маленьком экране всё пропорционально ужимается, чтобы влезть без прокрутки */
+  .tv {
+    width: min(960px, 100%, calc((100vh - 150px) * 1.5 + 60px));
+    padding: 26px 30px 14px;
+    border-radius: 36px;
+    background: linear-gradient(165deg, #3d352e 0%, #27221d 50%, #1b1815 100%);
+    box-shadow:
+      inset 0 2px 0 rgba(255, 255, 255, .08),
+      inset 0 -4px 0 rgba(0, 0, 0, .45),
+      0 30px 70px rgba(0, 0, 0, .75);
+  }
+  .screen {
+    position: relative;
+    aspect-ratio: 3 / 2;
+    border-radius: 26px / 20px;          /* чуть выпуклый кинескоп */
+    overflow: hidden;
+    background: #000;
+    box-shadow: 0 0 0 6px #0c0b0a, 0 0 0 9px #4a4036;
+  }
+  .screen canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: crisp-edges;        /* пиксели остаются чёткими квадратами, без размытия */
+    image-rendering: pixelated;
+  }
+  /* Скан-линии, затемнение по краям и блик стекла.
+     pointer-events: none — клики проходят сквозь слой к игре */
+  .screen::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background:
+      linear-gradient(160deg, rgba(255, 255, 255, .07) 0%, transparent 35%),
+      radial-gradient(ellipse at center, transparent 60%, rgba(0, 0, 0, .55) 100%),
+      linear-gradient(to bottom, rgba(0, 0, 0, .25) 0 33%, transparent 33% 100%);
+    /* Скан-линия повторяется ровно 200 раз — по одной на каждую строку игровых пикселей,
+       поэтому совпадает с картинкой при любом размере экрана */
+    background-size: auto, auto, 100% calc(100% / 200);
+  }
+  .panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 8px 0;
+  }
+  .brand { color: #9d8f7b; font-weight: bold; letter-spacing: .35em; font-size: 13px; }
+  .knobs { display: flex; align-items: center; gap: 14px; }
+  .knob {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #756b61, #2a2521 70%);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, .6);
+  }
+  .led { width: 8px; height: 8px; border-radius: 50%; background: #ff4a3a; box-shadow: 0 0 8px 2px rgba(255, 74, 58, .6); }
+
+  .hint { margin: 0; text-align: center; }
+  kbd {
+    display: inline-block;
+    min-width: 1.6em;
+    padding: 0 .35em;
+    border: 1px solid #5a5046;
+    border-bottom-width: 3px;
+    border-radius: 5px;
+    background: #221e1b;
+    color: #e8dcc8;
+    font: inherit;
+    line-height: 1.4;
+    text-align: center;
+  }
+
+  /* ---------- Телефон ----------
+     Кнопки как на джойстике старой приставки. Класс .touch на <html> ставит скрипт,
+     когда видит сенсорный экран. Вертикально: экран сверху, кнопки под ним.
+     Горизонтально: крестовина слева от экрана, прыжок справа — как на портативной приставке */
+  .pad, .rotate { display: none; }
+  .touch, .touch body { overscroll-behavior: none; }
+  .touch body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: "tv tv" "left right" "note note";
+    align-content: center;
+    gap: 14px 12px;
+    padding: 12px;
+    touch-action: manipulation;          /* двойной тап не увеличивает страницу */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .touch .hint, .touch .panel { display: none; }
+  .touch .tv {
+    grid-area: tv;
+    justify-self: center;
+    width: min(100%, calc((100vh - 210px) * 1.5 + 24px));
+    width: min(100%, calc((100dvh - 210px) * 1.5 + 24px));
+    padding: 12px;
+    border-radius: 22px;
+  }
+  .touch .pad { display: flex; align-items: center; gap: 10px; touch-action: none; }
+  .touch .pad-left { grid-area: left; justify-self: start; }
+  .touch .pad-right { grid-area: right; justify-self: end; }
+  .touch .rotate { display: block; grid-area: note; margin: 0; text-align: center; font-size: 12px; }
+  .pad button {
+    width: 68px;
+    height: 68px;
+    border: 2px solid #56493d;
+    border-radius: 16px;
+    background: linear-gradient(#3a332d, #1f1b18);
+    color: #eee4d2;
+    font: bold 22px/1 "Courier New", monospace;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pad .dpad { display: flex; gap: 8px; touch-action: none; }
+  .pad .small { width: auto; height: 36px; padding: 0 12px; border-radius: 18px; font-size: 12px; }
+  .pad .jump {
+    width: 84px;
+    height: 84px;
+    border-color: #5c120b;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #e0493a, #9a1c12);
+    font-size: 28px;
+  }
+  .pad .menu { display: flex; flex-direction: column; gap: 8px; }
+  .pad button.on { filter: brightness(1.45); transform: translateY(2px); }
+
+  @media (orientation: landscape) {
+    .touch body {
+      grid-template-columns: auto 1fr auto;
+      grid-template-areas: "left tv right";
+      gap: 10px;
+      padding: 8px;
+    }
+    .touch .tv {
+      width: min(calc(100vw - 330px), calc((100vh - 16px) * 1.5 + 24px));
+      width: min(calc(100vw - 330px), calc((100dvh - 16px) * 1.5 + 24px));
+    }
+    .touch .pad-left, .touch .pad-right { justify-self: center; }
+    .touch .pad-right { flex-direction: column-reverse; }
+    .touch .rotate { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<main class="tv">
+  <div class="screen">
+    <canvas id="game" width="300" height="200" role="img"
+      aria-label="Игра «Дорога домой»: коричневая полосатая кошка Лапка бежит через лес, перепрыгивает мухоморы и реки"></canvas>
+  </div>
+  <div class="panel" aria-hidden="true">
+    <span class="brand">КОТОВИЗОР</span>
+    <span class="knobs"><span class="led"></span><span class="knob"></span><span class="knob"></span></span>
+  </div>
+</main>
+
+<p class="hint">
+  <kbd>←</kbd> <kbd>→</kbd> бег &nbsp;·&nbsp; <kbd>↑</kbd> или <kbd>Пробел</kbd> прыжок &nbsp;·&nbsp;
+  <kbd>P</kbd> пауза &nbsp;·&nbsp; <kbd>M</kbd> звук
+</p>
+
+<!-- Кнопки для телефона (на компьютере спрятаны) -->
+<div class="pad pad-left">
+  <div class="dpad" aria-label="Крестовина: влево и вправо">
+    <button type="button" data-dir="left" aria-label="Влево">◀</button>
+    <button type="button" data-dir="right" aria-label="Вправо">▶</button>
+  </div>
+</div>
+<div class="pad pad-right">
+  <div class="menu">
+    <button type="button" class="small" data-key="start">СТАРТ</button>
+    <button type="button" class="small" id="fullscreen" hidden>ВО ВЕСЬ ЭКРАН</button>
+  </div>
+  <button type="button" class="jump" data-key="jump" aria-label="Прыжок">A</button>
+</div>
+<p class="rotate">Поверни телефон горизонтально — экран станет больше</p>
+
+<script>
+'use strict';
+
+/* =====================================================================
+   ДОРОГА ДОМОЙ — 8-битная игра про кошку Лапку.
+
+   Кошка Лапка уснула в коробке, а проснулась в лесу. Нужно добежать
+   до дома, где её ждёт девочка Соня, перепрыгивая мухоморы, ежей и реки.
+
+   Всё в одном файле: картинки нарисованы буквами прямо в коде,
+   музыка синтезируется на лету. Поэтому игра открывается двойным
+   кликом и работает без интернета.
+
+   Оглавление:
+     1. Настройки              8. Мир: карта и столкновения
+     2. Палитра                9. Кошка
+     3. Пиксельный шрифт      10. Объекты: рыбки, мухоморы, ежи
+     4. Спрайты               11. Эффекты: брызги, искры, надписи
+     5. Уровни и темы         12. Рисование
+     6. Звук и музыка         13. Экраны и ход игры
+     7. Управление            14. Главный цикл
+   ===================================================================== */
+
+
+// ---------------------------------------------------------------------
+// 1. НАСТРОЙКИ
+// ---------------------------------------------------------------------
+const W = 300, H = 200;      // внутреннее разрешение: 300×200 «кубиков», на экране растянуто в 3 раза — до 900×600
+const TILE = 16;             // размер одной клетки карты
+const ROWS = 13;             // строк в карте; нижняя видна наполовину, как на старых телевизорах
+const GROUND_Y = 11 * TILE;  // верх земли — по нему выравниваем фон
+
+const GRAVITY = 0.32;        // ускорение падения за кадр
+const MAX_FALL = 6;          // предельная скорость падения: меньше клетки, чтобы не проскочить сквозь землю
+const RUN_SPEED = 1.9;       // максимальная скорость бега
+const JUMP_SPEED = 6.6;      // сила прыжка: хватает на 4 клетки вверх и почти на 5 вперёд
+const START_LIVES = 9;       // у кошки девять жизней!
+const FISH_FOR_LIFE = 50;    // столько рыбок — ещё одна жизнь
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+// Сенсорный экран? Тогда показываем кнопки и подписи «СТАРТ» вместо «ENTER»
+let isTouch = matchMedia('(hover: none) and (pointer: coarse)').matches;
+function enableTouch() {
+  isTouch = true;
+  document.documentElement.classList.add('touch');
+}
+if (isTouch) enableTouch();
+window.addEventListener('touchstart', enableTouch, { once: true, passive: true });
+
+// Мелкие помощники
+const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+const pad = (n, len) => String(n).padStart(len, '0');
+const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+// «Случайное» число от 0 до 1, но для одного и того же n — всегда одно и то же.
+// Так трава и цветы на земле не «прыгают» от кадра к кадру
+const rnd = n => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+
+function rect(g, x, y, w, h, color) {
+  g.fillStyle = color;
+  g.fillRect(x, y, w, h);
+}
+
+
+// ---------------------------------------------------------------------
+// 2. ПАЛИТРА — как у старой приставки: немного ярких цветов.
+//    Каждая буква в рисунках спрайтов означает свой цвет.
+// ---------------------------------------------------------------------
+const PAL = {
+  o: '#2c1608', // контур — почти чёрный, тёплый коричневый
+  k: '#000000', // чёрный: полоски кошки, зрачки, нос ежа
+  b: '#a0602c', // коричневая шерсть кошки
+  l: '#e8b478', // светлая шерсть: мордочка, грудка, лапки
+  p: '#f890a8', // розовый: нос и уши кошки, щёчки Сони
+  e: '#b8f018', // жёлто-зелёные глаза
+  w: '#fcfcfc', // белый
+  r: '#e82818', // красный: шляпка мухомора, бант Сони
+  R: '#a01008', // тень под шляпкой, улыбка Сони
+  c: '#fce4b0', // кремовый: ножка гриба, мордочка ежа
+  y: '#f8b800', // золотая рыбка
+  Y: '#fcf0a0', // блик на рыбке
+  a: '#d05800', // брюшко рыбки
+  h: '#6c5440', // иголки ежа
+  H: '#a88c6c', // светлые иголки
+  x: '#c8904c', // картон коробки
+  X: '#8c5c28', // тень картона
+  t: '#ecd8a8', // скотч
+  s: '#fcc8a0', // кожа Сони
+  g: '#f8c848', // золотистые волосы
+  G: '#c88820', // тень на волосах
+  d: '#3c8cfc', // голубое платье
+  D: '#1c5cc8', // тень на платье
+  n: '#6c3010', // туфельки
+};
+
+
+// ---------------------------------------------------------------------
+// 3. ПИКСЕЛЬНЫЙ ШРИФТ 5×7 — буквы нарисованы решётками.
+//    Хочешь поправить букву — перерисуй её «#» и «.».
+// ---------------------------------------------------------------------
+const FONT = {};
+const FONT_SRC = [
+  ['АБВГДЕЁЖ', `
+    .###. ##### ####. ##### ..### ##### .#.#. #.#.#
+    #...# #.... #...# #.... .#..# #.... ..... #.#.#
+    #...# #.... #...# #.... .#..# #.... ##### .###.
+    ##### ####. ####. #.... .#..# ####. #.... ..#..
+    #...# #...# #...# #.... .#..# #.... ####. .###.
+    #...# #...# #...# #.... ##### #.... #.... #.#.#
+    #...# ####. ####. #.... #...# ##### ##### #.#.#`],
+  ['ЗИЙКЛМНО', `
+    .###. #...# .#.#. #...# ..### #...# #...# .###.
+    #...# #...# ..#.. #..#. .#..# ##.## #...# #...#
+    ....# #..## #...# #.#.. .#..# #.#.# #...# #...#
+    ..##. #.#.# #..## ##... .#..# #.#.# ##### #...#
+    ....# ##..# #.#.# #.#.. .#..# #...# #...# #...#
+    #...# #...# ##..# #..#. .#..# #...# #...# #...#
+    .###. #...# #...# #...# #...# #...# #...# .###.`],
+  ['ПРСТУФХЦ', `
+    ##### ####. .###. ##### #...# ..#.. #...# #..#.
+    #...# #...# #...# ..#.. #...# .###. #...# #..#.
+    #...# #...# #.... ..#.. #...# #.#.# .#.#. #..#.
+    #...# ####. #.... ..#.. .#### #.#.# ..#.. #..#.
+    #...# #.... #.... ..#.. ....# #.#.# .#.#. #..#.
+    #...# #.... #...# ..#.. #...# .###. #...# #####
+    #...# #.... .###. ..#.. .###. ..#.. #...# ....#`],
+  ['ЧШЩЪЫЬЭЮЯ', `
+    #...# #.#.# #.#.# ##... #...# #.... .###. #..#. .####
+    #...# #.#.# #.#.# .#... #...# #.... #...# #.#.# #...#
+    #...# #.#.# #.#.# .#... #...# #.... ....# #.#.# #...#
+    .#### #.#.# #.#.# .###. ##..# ####. ..### ###.# .####
+    ....# #.#.# #.#.# .#..# #.#.# #...# ....# #.#.# ..#.#
+    ....# #.#.# ##### .#..# #.#.# #...# #...# #.#.# .#..#
+    ....# ##### ....# .###. ##..# ####. .###. #..#. #...#`],
+  ['0123456789', `
+    .###. ..#.. .###. ##### ...#. ##### ..##. ##### .###. .###.
+    #...# .##.. #...# ....# ..##. #.... .#... ....# #...# #...#
+    #..## ..#.. ....# ...#. .#.#. ####. #.... ...#. #...# #...#
+    #.#.# ..#.. ...#. ..##. #..#. ....# ####. ..#.. .###. .####
+    ##..# ..#.. ..#.. ....# ##### ....# #...# .#... #...# ....#
+    #...# ..#.. .#... #...# ...#. #...# #...# .#... #...# ...#.
+    .###. .###. ##### .###. ...#. .###. .###. .#... .###. .##..`],
+  ['DFGIJLNQ', `
+    ####. ##### .###. .###. ..### #.... #...# .###.
+    #...# #.... #...# ..#.. ...#. #.... #...# #...#
+    #...# #.... #.... ..#.. ...#. #.... ##..# #...#
+    #...# ####. #.### ..#.. ...#. #.... #.#.# #...#
+    #...# #.... #...# ..#.. ...#. #.... #..## #.#.#
+    #...# #.... #...# ..#.. #..#. #.... #...# #..#.
+    ####. #.... .#### .###. .##.. ##### #...# .##.#`],
+  ['RSUVWYZ', `
+    ####. .###. #...# #...# #...# #...# #####
+    #...# #...# #...# #...# #...# #...# ....#
+    #...# #.... #...# #...# #...# .#.#. ...#.
+    ####. .###. #...# #...# #.#.# ..#.. ..#..
+    #.#.. ....# #...# #...# #.#.# ..#.. .#...
+    #..#. #...# #...# .#.#. #.#.# ..#.. #....
+    #...# .###. .###. ..#.. .#.#. ..#.. #####`],
+  ['.,!?:-+×/←→↑♥()', `
+    ..... ..... ..#.. .###. ..... ..... ..... ..... ....# ..... ..... ..#.. ..... ...#. .#...
+    ..... ..... ..#.. #...# ..#.. ..... ..#.. #...# ....# ..#.. ..#.. .###. ##.## ..#.. ..#..
+    ..... ..... ..#.. ....# ..... ..... ..#.. .#.#. ...#. .#... ...#. #.#.# ##### .#... ...#.
+    ..... ..... ..#.. ...#. ..... .###. ##### ..#.. ..#.. ##### ##### ..#.. ##### .#... ...#.
+    ..... ..... ..#.. ..#.. ..... ..... ..#.. .#.#. .#... .#... ...#. ..#.. .###. .#... ...#.
+    ..... ..#.. ..... ..... ..#.. ..... ..#.. #...# #.... ..#.. ..#.. ..#.. ..#.. ..#.. ..#..
+    ..#.. .#... ..#.. ..#.. ..... ..... ..... ..... #.... ..... ..... ..... ..... ...#. .#...`],
+];
+for (const [chars, block] of FONT_SRC) {
+  const lines = block.trim().split('\n').map(line => line.trim().split(/\s+/));
+  [...chars].forEach((ch, i) => { FONT[ch] = lines.map(row => row[i]); });
+  if (lines.some(row => row.length !== chars.length)) console.warn('Шрифт: не совпадает число букв в блоке', chars);
+}
+// Латинские буквы, которые выглядят как русские, берём готовыми
+for (const [lat, cyr] of Object.entries({ A: 'А', B: 'В', C: 'С', E: 'Е', H: 'Н', K: 'К', M: 'М', O: 'О', P: 'Р', T: 'Т', X: 'Х' })) {
+  FONT[lat] = FONT[cyr];
+}
+
+// Рисует одну строку. scale — во сколько раз крупнее, g — на каком холсте
+function paintText(g, str, x, y, color, scale = 1) {
+  g.fillStyle = color;
+  for (let i = 0; i < str.length; i++) {
+    const glyph = FONT[str[i]];
+    if (!glyph) continue;                       // пробел и незнакомые символы пропускаем
+    for (let row = 0; row < 7; row++) {
+      for (let col = 0; col < 5; col++) {
+        if (glyph[row][col] === '#') g.fillRect(x + (i * 6 + col) * scale, y + row * scale, scale, scale);
+      }
+    }
+  }
+}
+
+// Пишем текст на экране игры. align: 'left' | 'center' | 'right', shadow — цвет тени
+function text(str, x, y, { color = '#fcfcfc', scale = 1, align = 'left', shadow = null, g = ctx } = {}) {
+  str = String(str).toUpperCase();
+  const width = str.length * 6 * scale - scale;
+  if (align === 'center') x -= Math.floor(width / 2);
+  if (align === 'right') x -= width;
+  x = Math.round(x);
+  y = Math.round(y);
+  if (shadow) paintText(g, str, x + scale, y + scale, shadow, scale);
+  paintText(g, str, x, y, color, scale);
+}
+
+// ---------------------------------------------------------------------
+// 4. СПРАЙТЫ — картинки нарисованы буквами палитры, «.» — прозрачно.
+//    Поменяй буквы — поменяется картинка. Все строки одного рисунка
+//    должны быть одинаковой длины.
+// ---------------------------------------------------------------------
+
+// Создаёт маленький холст и даёт на нём порисовать
+function makeCanvas(w, h, paint) {
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  paint(c.getContext('2d'));
+  return c;
+}
+
+// Превращает рисунок из букв в картинку
+function sprite(rows) {
+  if (rows.some(row => row.length !== rows[0].length)) console.warn('Спрайт: строки разной длины', rows);
+  return makeCanvas(rows[0].length, rows.length, g => {
+    rows.forEach((row, y) => {
+      for (let x = 0; x < row.length; x++) {
+        if (row[x] !== '.') rect(g, x, y, 1, 1, PAL[row[x]]);
+      }
+    });
+  });
+}
+
+// Поворачивает рисунок на четверть оборота (для рыбы, которая выпрыгивает из реки)
+function rotateRows(rows, clockwise) {
+  const h = rows.length, w = rows[0].length, out = [];
+  for (let x = 0; x < w; x++) {
+    let line = '';
+    for (let y = 0; y < h; y++) line += clockwise ? rows[h - 1 - y][x] : rows[y][w - 1 - x];
+    out.push(line);
+  }
+  return out;
+}
+
+// Кошка смотрит вправо. Верх (голова, спина, хвост) одинаковый во всех кадрах,
+// а лапы в каждом кадре свои — из их смены и получается бег.
+// o — контур, b — коричневая шерсть, k — чёрные полоски, l — светлая шерсть
+const CAT_TOP = [
+  '...............o.....o..',
+  '.o............opo...opo.',
+  'oko...........obbooobbo.',
+  'obo...........obkbkbkbo.',
+  'oko...........obbbbbbbo.',
+  'obo...........obekbekbo.',
+  '.oboooooooooooobekbekbo.',
+  '..obbkbbkbbkbbolbbpbblo.',
+  '..obbkbbkbbkbbbolllllo..',
+  '..obbbbbbbbbbbllooooo...',
+  '..oblllllllllllo........',
+];
+// Та же кошка, но моргает: вместо глаз — чёрточки
+const CAT_BLINK = CAT_TOP.map((row, i) =>
+  i === 5 ? 'obo...........obbbbbbbo.' :
+  i === 6 ? '.oboooooooooooobkkbkkbo.' : row);
+
+const CAT_LEGS = {
+  stand: [                       // стоит
+    '..obbooooooobbo.........',
+    '..obbo.....obbo.........',
+    '..obbo.....obbo.........',
+    '..ollo.....ollo.........',
+    '..oooo.....oooo.........',
+  ],
+  spread: [                      // лапы врозь — в беге и в прыжке
+    '..obbooooooobbo.........',
+    '.obbo.......obbo........',
+    'obbo.........obbo.......',
+    'ollo..........ollo......',
+    'oooo..........oooo......',
+  ],
+  together: [                    // лапы вместе — в беге и в падении
+    '..oobbooooobboo.........',
+    '....obbo..obbo..........',
+    '.....obboobbo...........',
+    '.....olloollo...........',
+    '.....oooooooo...........',
+  ],
+};
+
+// Картонная коробка, из которой кошка вылезает в начале игры
+const BOX_CLOSED = [
+  '........................',
+  '........................',
+  '........................',
+  '........................',
+  '........................',
+  '........................',
+  '..oooooooooooooooooooo..',
+  '..oxxxxxxxxttxxxxxxxxo..',
+  '..oXXXXXXXXttXXXXXXXXo..',
+  '..oxxxxxxxxttxxxxxxxxo..',
+  '..oxxxxxxxxttxxxxxxxxo..',
+  '..oxxxxxxxxxxxxxxxxxxo..',
+  '..oxxxxxxxxxxxxxxxxxxo..',
+  '..oxxxxxxxxxxxxxxxxxxo..',
+  '..oXXXXXXXXXXXXXXXXXXo..',
+  '..oooooooooooooooooooo..',
+];
+const BOX_OPEN = [
+  '........................',
+  '........................',
+  'oo....................oo',
+  'oxo..................oxo',
+  '.oxo................oxo.',
+  '..oxo..............oxo..',
+  '..ooXXXXXXXXXXXXXXXXoo..',
+  '..oooooooooooooooooooo..',
+  '..oxxxxxxxxxxxxxxxxxxo..',
+  '..oxxxxxxxxxxxxxxxxxxo..',
+  '..oxxxxxxxxxxxxxxxxxxo..',
+  '..oxxxxxxxxxxxxxxxxxxo..',
+  '..oxxxxxxxxxxxxxxxxxxo..',
+  '..oxxxxxxxxxxxxxxxxxxo..',
+  '..oXXXXXXXXXXXXXXXXXXo..',
+  '..oooooooooooooooooooo..',
+];
+
+// Мухомор — трогать нельзя!
+const MUSHROOM = [
+  '................',
+  '................',
+  '................',
+  '......oooo......',
+  '....oorrrroo....',
+  '...orrwwrrrro...',
+  '..orrwwrrrwwro..',
+  '..orrrrrrrwwro..',
+  '.orwwrrrrrrrrro.',
+  '.orwwrrrrwwrrro.',
+  '.oRRRRRRRRRRRRo.',
+  '...ooccccccoo...',
+  '......occo......',
+  '......occo......',
+  '.....occcco.....',
+  '.....oooooo.....',
+];
+
+// Ёжик идёт вправо; два кадра — переставляет лапки
+const HOG = [
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+  '....o.o.o.o.....',
+  '...ohohohoho....',
+  '..ohHhHhHhHho...',
+  '.ohHhHhHhHhHco..',
+  '.ohhHhHhHhHcccoo',
+  'ohHhHhHhHhcckcco',
+  'ohhHhHhHhhccccck',
+  'ohHhHhHhhcccccoo',
+  '.oooooooooooooo.',
+  '..oco.....oco...',
+  '..ooo.....ooo...',
+];
+const HOG_STEP = HOG.slice(0, 14).concat(['...oco...oco....', '...ooo...ooo....']);
+
+// Рыбка — её собираем
+const FISH = [
+  '.....oooo...',
+  'o...oyyyyo..',
+  'oo.oyyYyyyo.',
+  'oaoyyyyyykyo',
+  'oaoyyyyyyyyo',
+  'oo.oaaaaaao.',
+  'o...oaaaao..',
+  '.....oooo...',
+];
+
+// Соня — девочка, которая ждёт Лапку у дома: два хвостика с бантиками, голубое платье.
+// s — кожа, g — волосы, d — платье, w — воротничок и гольфы, n — туфельки
+const SONYA = [
+  '.....oooooo.....',
+  '....oggggggo....',
+  '...oggggGgggo...',
+  '..oggggGGggggo..',
+  'rroggggggggggorr',
+  'rrogssssssssgorr',
+  '.gogskssssksgog.',
+  '.gogskssssksgog.',
+  '.gogpsssssspgog.',
+  '.gogsssRRsssgog.',
+  '.gooossssssooog.',
+  '.gg..oossoo..gg.',
+  '.oo.owwwwwwo.oo.',
+  '..osoddddddoso..',
+  '..osoddddddoso..',
+  '..osoDDDDDDoso..',
+  '..osddddddddso..',
+  '..oddddDDddddo..',
+  '.odddddDDdddddo.',
+  '.oDDDDDDDDDDDDo.',
+  '..oooooooooooo..',
+  '....owwoowwo....',
+  '....owwoowwo....',
+  '...onnnoonnno...',
+];
+// Радостная Соня: глаза-«галочки» и открытая улыбка
+const SONYA_HAPPY = SONYA.map((row, i) =>
+  i === 7 ? '.gogksksskskgog.' :
+  i === 10 ? '.gooossRRssooog.' : row);
+// Шаг: одна туфелька приподнята
+const SONYA_STEP = SONYA_HAPPY.slice(0, 22).concat(['....onnoowwo....', '........onnno...']);
+
+const SPR = {
+  catIdle:   sprite([...CAT_TOP, ...CAT_LEGS.stand]),
+  catBlink:  sprite([...CAT_BLINK, ...CAT_LEGS.stand]),
+  catJump:   sprite([...CAT_TOP, ...CAT_LEGS.spread]),
+  catFall:   sprite([...CAT_TOP, ...CAT_LEGS.together]),
+  // Цикл бега: врозь → стоя → вместе → стоя
+  catRun:    [CAT_LEGS.spread, CAT_LEGS.stand, CAT_LEGS.together, CAT_LEGS.stand]
+               .map(legs => sprite([...CAT_TOP, ...legs])),
+  boxClosed: sprite(BOX_CLOSED),
+  boxOpen:   sprite(BOX_OPEN),
+  mushroom:  sprite(MUSHROOM),
+  hog:       [sprite(HOG), sprite(HOG_STEP)],
+  fish:      sprite(FISH),
+  fishUp:    sprite(rotateRows(FISH, false)),   // носом вверх — взлетает
+  fishDown:  sprite(rotateRows(FISH, true)),    // носом вниз — падает обратно
+  sonya:      sprite(SONYA),
+  sonyaHappy: sprite(SONYA_HAPPY),
+  sonyaStep:  sprite(SONYA_STEP),
+};
+
+// Рисует спрайт; flipX — отразить (смотрит влево), flipY — вверх ногами
+function drawSprite(img, x, y, flipX = false, flipY = false) {
+  x = Math.round(x);
+  y = Math.round(y);
+  if (!flipX && !flipY) {
+    ctx.drawImage(img, x, y);
+    return;
+  }
+  ctx.save();
+  ctx.translate(x + (flipX ? img.width : 0), y + (flipY ? img.height : 0));
+  ctx.scale(flipX ? -1 : 1, flipY ? -1 : 1);
+  ctx.drawImage(img, 0, 0);
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------------
+// 5. УРОВНИ И ТЕМЫ
+//
+// Уровень нарисован буквами — одна буква = одна клетка 16×16.
+//   .  воздух                  #  земля (сверху сама вырастет трава)
+//   ~  река — упадёшь в воду, потеряешь жизнь
+//   S  камень                  L  бревно
+//   =  мостик: на него можно запрыгнуть и снизу
+//   B  коробка с рыбкой — стукни её головой снизу
+//   o  рыбка — собирай         f  рыба в реке: выпрыгивает, лови её!
+//   M  мухомор — не трогай!    h  ёжик — не трогай!
+//   C  флажок: если кошка упадёт, она начнёт отсюда
+//   P  откуда кошка начинает   E  указатель «ДОМОЙ» — конец уровня
+//   D  дом — конец игры        G  Соня: ждёт кошку у дома
+//   t  ёлка, T  берёза, *  куст, F  забор — просто украшения
+// ---------------------------------------------------------------------
+const LEVELS = [
+  {
+    name: 'ЛЕС', theme: 'morning', music: 'forest', startInBox: true,
+    map: [
+      '................................................................................................................................................................',
+      '................................................................................................................................................................',
+      '................................................................................................................................................................',
+      '................................................................................................................................................................',
+      '................................................................................................................................................................',
+      '................................................................................................................................................................',
+      '................................................................................................................................................................',
+      '..................................BB..................................................ooo...ooo..................B.B............................................',
+      '..............ooo.........oo.....................ooo.................................=====.=====.................................................ooo............',
+      '.............o...o.......o..o....................###..........oo....oo................................oo....oo..................................o...o...........',
+      'T..P...t....*..M......*.............t...C...T..#####....h..............t....M...C..t....M.....M...................*.....C....h....L....T.h....*.........t...E...',
+      '##########################~~##################################~~SSS~~################################~~~SSS~~~###################################~~~############',
+      '##########################~~##################################~~SSS~~################################~~~SSS~~f###################################~~~############',
+    ],
+  },
+  {
+    name: 'У РЕКИ', theme: 'day', music: 'river',
+    map: [
+      '....................................................................................................................................................................................',
+      '....................................................................................................................................................................................',
+      '....................................................................................................................................................................................',
+      '....................................................................................................................................................................................',
+      '....................................................................................................................................................................................',
+      '....................................................................................................................................................................................',
+      '....................................................................................................................................................................................',
+      '..................................................ooo.............................BB.BB.............................................................................................',
+      '.................................................SSSS..............oo...................................oooooooo.............o.....o................................................',
+      '.........oo.................oo................................oo.....ooooo.............................==========...........o.o...o.o............ooo................................',
+      '.P...t...........T......................C....M..........M............SSS........C..T.....LL......h......................C....M.....M...##...................h..M...T...h.t.....E....',
+      '#########~~############=====~~=====###########################~~SSS~~SSS~~#############################~~~~~~~~~~################################~~~################################',
+      '#########~~############~~~~~~~~~~~~###########################~~SSS~fSSS~f#############################~~~~~f~~~~################################~f~################################',
+    ],
+  },
+  {
+    name: 'ДОРОГА ДОМОЙ', theme: 'sunset', music: 'home',
+    map: [
+      '....................................................................................................................................................................................',
+      '....................................................................................................................................................................................',
+      '....................................................................................................................................................................................',
+      '....................................................................................................................................................................................',
+      '....................................................................................................................................................................................',
+      '....................................................................................................................................................................................',
+      '....................................................................................................................................................................................',
+      '......................................................................ooo...............................B.B.B...................oooo................................................',
+      '............................oooo.....................................=====.....................................................SSSSSS............o.....o............................',
+      '...........................######...........oo...oo.....................................oo....................................SSSSSSSS..........o.o...o.o...........................',
+      '.P....t....T....*........##########.M...C.................h...FFF....M...M..FFF.C.............................L......h..C....SSSSSSSSSS......FFF.M.....M...FFF....FFFF..*....G..D...',
+      '############################################~~SSS~~#################################====~~=====#####################################################################################',
+      '############################################~~SSS~f#################################~~~~f~~~~~~#####################################################################################',
+    ],
+  },
+];
+
+// Время суток у каждого уровня своё: утро → день → закат.
+// Небо — полосами сверху вниз, как рисовали на старых приставках.
+const THEMES = {
+  morning: {
+    sky: ['#3c7cfc', '#5890fc', '#78a8fc', '#98c0fc', '#bcdcfc'],
+    sun: { x: 240, y: 36, r: 11, color: '#fcfcd0', glow: '#d8ecfc' },
+    cloud: ['#fcfcfc', '#c4dcfc'],
+    hills: '#8cd0bc', hillsRim: '#b0e4d4',
+    forestFar: '#3c9c68', forestNear: '#1c7044',
+    grass: ['#a0ec5c', '#4cbc24', '#2c7c10'],   // светлая, обычная и тёмная трава
+    dirt: ['#8c5424', '#b07038', '#5c3010'],    // земля, светлые и тёмные крошки
+    water: ['#b0e8fc', '#48a4fc', '#2468d8'],   // блики, вода, глубина
+    leaves: ['#8ce454', '#3cac2c', '#1c6c1c'],
+  },
+  day: {
+    sky: ['#2464ec', '#3c7cf4', '#5c98fc', '#80b4fc', '#a8d0fc'],
+    sun: { x: 64, y: 30, r: 12, color: '#fcfcb0', glow: '#bcdcfc' },
+    cloud: ['#fcfcfc', '#bcd4fc'],
+    hills: '#7cacdc', hillsRim: '#a8c8ec',
+    forestFar: '#2c9454', forestNear: '#146838',
+    grass: ['#a0ec5c', '#4cbc24', '#2c7c10'],
+    dirt: ['#8c5424', '#b07038', '#5c3010'],
+    water: ['#a8e4fc', '#3c9cfc', '#1c5cd0'],
+    leaves: ['#8ce454', '#3cac2c', '#1c6c1c'],
+  },
+  sunset: {
+    sky: ['#2c1854', '#58206c', '#943068', '#d4504c', '#f89444'],
+    sun: { x: 176, y: 128, r: 20, color: '#fcd878', glow: '#fcb058', stripes: true },
+    cloud: ['#fcb0a0', '#c8687c'],
+    hills: '#7c2c5c', hillsRim: '#a84468',
+    forestFar: '#4c1844', forestNear: '#2c0c2c',
+    grass: ['#c8d85c', '#7ca030', '#44641c'],
+    dirt: ['#7c4424', '#a05c34', '#4c2414'],
+    water: ['#fcc088', '#d06c70', '#703070'],   // в реке отражается закат
+    leaves: ['#b8d058', '#6c9434', '#34541c'],
+  },
+};
+
+// ---------------------------------------------------------------------
+// 6. ЗВУК И МУЗЫКА — всё синтезируется на лету через Web Audio.
+//    Инструменты как у приставки: две «пищалки» (прямоугольная волна
+//    разной ширины), треугольная волна для баса и шум для барабанов.
+// ---------------------------------------------------------------------
+let actx = null;                        // звуковой движок; браузер разрешает его только после нажатия
+let master, sfxBus, musicBus;           // микшер: общая громкость, эффекты и музыка отдельно
+let pulseWide, pulseThin, noiseBuffer;  // «инструменты»
+const MUSIC_VOLUME = 0.4;
+let muted = false;
+try { muted = localStorage.getItem('cat-home-muted') === '1'; } catch (e) { /* хранилище недоступно — не страшно */ }
+
+function initAudio() {
+  if (actx) {
+    if (actx.state === 'suspended') actx.resume();
+    return;
+  }
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return;                // совсем старый браузер — играем без звука
+  actx = new AudioCtx();
+  master = actx.createGain();
+  master.gain.value = muted ? 0 : 0.7;
+  master.connect(actx.destination);
+  sfxBus = actx.createGain();
+  sfxBus.gain.value = 0.55;
+  sfxBus.connect(master);
+  musicBus = newMusicBus();
+  pulseWide = makePulseWave(0.25);      // звонкая «пищалка» — для мелодии
+  pulseThin = makePulseWave(0.125);     // тонкая и тихая — для аккордов
+  noiseBuffer = actx.createBuffer(1, actx.sampleRate, actx.sampleRate);
+  const data = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+}
+
+function newMusicBus() {
+  const bus = actx.createGain();
+  bus.gain.value = MUSIC_VOLUME;
+  bus.connect(master);
+  return bus;
+}
+
+// Прямоугольная волна нужной ширины, собранная из синусоид (ряд Фурье)
+function makePulseWave(duty) {
+  const n = 64, real = new Float32Array(n), imag = new Float32Array(n);
+  for (let i = 1; i < n; i++) {
+    real[i] = Math.sin(2 * Math.PI * i * duty) / (i * Math.PI);
+    imag[i] = (1 - Math.cos(2 * Math.PI * i * duty)) / (i * Math.PI);
+  }
+  return actx.createPeriodicWave(real, imag);
+}
+
+// Одна нота: частота, длительность, тембр и громкость
+function tone(bus, time, freq, dur, { wave = 'square', vol = 0.2, slide = 0, sustain = 0.7, vibrato = 0 } = {}) {
+  const osc = actx.createOscillator();
+  if (wave === 'wide') osc.setPeriodicWave(pulseWide);
+  else if (wave === 'thin') osc.setPeriodicWave(pulseThin);
+  else osc.type = wave;
+  osc.frequency.setValueAtTime(freq, time);
+  if (slide) osc.frequency.exponentialRampToValueAtTime(slide, time + dur);   // звук «съезжает» вверх или вниз
+  if (vibrato) {                        // лёгкое дрожание длинных нот — как у живого певца
+    const lfo = actx.createOscillator(), depth = actx.createGain();
+    lfo.frequency.value = 5.5;
+    depth.gain.setValueAtTime(0, time);
+    depth.gain.linearRampToValueAtTime(vibrato, time + Math.min(0.25, dur));
+    lfo.connect(depth).connect(osc.detune);
+    lfo.start(time);
+    lfo.stop(time + dur + 0.05);
+  }
+  const env = actx.createGain();        // громкость: быстро вверх, потом плавно вниз — без щелчков
+  const release = Math.min(0.05, dur / 3);
+  env.gain.setValueAtTime(0, time);
+  env.gain.linearRampToValueAtTime(vol, time + 0.005);
+  env.gain.linearRampToValueAtTime(vol * sustain, time + dur - release);
+  env.gain.linearRampToValueAtTime(0, time + dur);
+  osc.connect(env).connect(bus);
+  osc.start(time);
+  osc.stop(time + dur + 0.05);
+}
+
+// Шум — для барабанов и всплесков
+function noise(bus, time, dur, { vol = 0.2, type = 'highpass', freq = 5000, q = 1 } = {}) {
+  const src = actx.createBufferSource();
+  src.buffer = noiseBuffer;
+  const filter = actx.createBiquadFilter();
+  filter.type = type;
+  filter.frequency.value = freq;
+  filter.Q.value = q;
+  const env = actx.createGain();
+  env.gain.setValueAtTime(vol, time);
+  env.gain.exponentialRampToValueAtTime(0.001, time + dur);
+  src.connect(filter).connect(env).connect(bus);
+  src.start(time, Math.random() * 0.5, dur + 0.05);
+}
+
+// «Мяу»: высота звука и окраска гласной меняются — м-я-у
+function meow(time) {
+  const d = 0.55;
+  const osc = actx.createOscillator();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(420, time);
+  osc.frequency.linearRampToValueAtTime(720, time + 0.14);
+  osc.frequency.linearRampToValueAtTime(600, time + 0.32);
+  osc.frequency.linearRampToValueAtTime(380, time + d);
+  const filter = actx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.Q.value = 2.5;
+  filter.frequency.setValueAtTime(600, time);
+  filter.frequency.linearRampToValueAtTime(1700, time + 0.16);
+  filter.frequency.linearRampToValueAtTime(700, time + d);
+  const env = actx.createGain();
+  env.gain.setValueAtTime(0, time);
+  env.gain.linearRampToValueAtTime(0.5, time + 0.07);
+  env.gain.linearRampToValueAtTime(0.4, time + d - 0.12);
+  env.gain.linearRampToValueAtTime(0, time + d);
+  osc.connect(filter).connect(env).connect(sfxBus);
+  osc.start(time);
+  osc.stop(time + d + 0.05);
+}
+
+// Звуковые эффекты
+function play(fn) { if (actx) fn(actx.currentTime + 0.005); }
+const sfx = {
+  jump:   () => play(t => tone(sfxBus, t, 280, 0.16, { wave: 'wide', vol: 0.16, slide: 620, sustain: 0.6 })),
+  fish:   () => play(t => {
+    tone(sfxBus, t, 1319, 0.07, { wave: 'thin', vol: 0.12 });
+    tone(sfxBus, t + 0.07, 1976, 0.18, { wave: 'thin', vol: 0.12, sustain: 0.5 });
+  }),
+  catch:  () => play(t => [784, 988, 1175, 1568].forEach((f, i) => tone(sfxBus, t + i * 0.06, f, 0.1, { wave: 'wide', vol: 0.13 }))),
+  box:    () => play(t => tone(sfxBus, t, 220, 0.08, { vol: 0.14, slide: 110 })),
+  bonk:   () => play(t => tone(sfxBus, t, 140, 0.06, { wave: 'triangle', vol: 0.3, slide: 80 })),
+  splash: () => play(t => {
+    noise(sfxBus, t, 0.45, { vol: 0.35, type: 'bandpass', freq: 900, q: 0.6 });
+    tone(sfxBus, t, 520, 0.25, { wave: 'triangle', vol: 0.25, slide: 90 });
+  }),
+  drip:   () => play(t => noise(sfxBus, t, 0.18, { vol: 0.12, type: 'bandpass', freq: 1400, q: 0.8 })),
+  hurt:   () => play(t => tone(sfxBus, t, 880, 0.45, { wave: 'wide', vol: 0.18, slide: 120, sustain: 0.8 })),
+  flag:   () => play(t => {
+    tone(sfxBus, t, 1047, 0.08, { wave: 'thin', vol: 0.12 });
+    tone(sfxBus, t + 0.09, 1568, 0.2, { wave: 'thin', vol: 0.12 });
+  }),
+  life:   () => play(t => [1047, 1319, 1568, 2093].forEach((f, i) => tone(sfxBus, t + i * 0.07, f, 0.09, { wave: 'thin', vol: 0.12 }))),
+  pop:    () => play(t => tone(sfxBus, t, 300, 0.1, { vol: 0.12, slide: 900 })),
+  rustle: () => play(t => noise(sfxBus, t, 0.12, { vol: 0.15, type: 'bandpass', freq: 2500 })),
+  blip:   () => play(t => tone(sfxBus, t, 1760, 0.025, { wave: 'thin', vol: 0.04 })),
+  pause:  () => play(t => {
+    tone(sfxBus, t, 988, 0.06, { wave: 'thin', vol: 0.1 });
+    tone(sfxBus, t + 0.08, 1319, 0.08, { wave: 'thin', vol: 0.1 });
+  }),
+  meow:   () => play(meow),
+};
+
+// ---- Ноты ----
+const NOTE_STEPS = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+// «F#5» → номер ноты (как клавиша пианино); ля первой октавы A4 = 69 = 440 Гц
+function noteToMidi(name) {
+  const m = /^([A-G])([#b]?)(\d)$/.exec(name);
+  return 12 * (Number(m[3]) + 1) + NOTE_STEPS[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0);
+}
+const midiToFreq = n => 440 * Math.pow(2, (n - 69) / 12);
+
+// Мелодия записана восьмыми: «G5 . B5 -» — нота, пауза, нота, «-» тянет предыдущую ноту
+function parseMelody(textLine) {
+  const tokens = textLine.trim().split(/\s+/), notes = [];
+  tokens.forEach((tok, i) => {
+    if (tok === '.' || tok === '-') return;
+    let len = 1;
+    while (tokens[i + len] === '-') len++;
+    notes.push({ at: i, midi: noteToMidi(tok), len });
+  });
+  return notes;
+}
+
+// Аккорд «Em» → звуки аккорда и нота для баса
+function parseChord(name) {
+  const m = /^([A-G])([#b]?)(m?)$/.exec(name);
+  const root = (NOTE_STEPS[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0) + 12) % 12;
+  let bass = 36 + root;
+  if (bass < 40) bass += 12;            // бас держим в удобном диапазоне
+  return { root, tones: [0, m[3] ? 3 : 4, 7], bass };
+}
+
+// ---- Песни ----
+// chords — аккорд на каждый такт («C+D» — полтакта C, полтакта D),
+// lead — мелодия по тактам, bass — рисунок баса восьмыми
+// (0 — основной звук аккорда, 7 — квинта, 12 — октава выше, null — тишина),
+// drums — барабаны шестнадцатыми: k — бочка, s — малый, h — тарелочка.
+const SONGS = {
+  // Уровень 1: бодрая лесная тропинка, соль мажор
+  forest: {
+    bpm: 140,
+    chords: 'G Em C D G Em C+D G C D Em Em C D G D',
+    lead: [
+      'G5 . B5 A5 G5 . D5 .',   'E5 . G5 F#5 E5 . B4 .',  'C5 . E5 D5 C5 . A4 .',   'D5 . F#5 E5 D5 C5 B4 A4',
+      'G5 . B5 A5 G5 . D5 .',   'E5 . G5 F#5 E5 . G5 A5', 'B5 . A5 G5 A5 . F#5 D5', 'G5 - - - . . . D5',
+      'E5 - - D5 C5 - D5 E5',   'F#5 - - E5 D5 - E5 F#5', 'G5 - - F#5 E5 - F#5 G5', 'B5 - - - A5 - G5 -',
+      'E5 - - D5 C5 - D5 E5',   'F#5 - - E5 D5 - E5 F#5', 'G5 - D5 - B4 - D5 -',    'A5 - - - F#5 - D5 -',
+    ],
+    bass: [0, null, 7, null, 12, null, 7, null],
+    harmony: 'stab',
+    drums: 'k.h.s.h.k.hks.h.',
+  },
+  // Уровень 2: течёт река — ре мажор, «перекатывающийся» ритм
+  river: {
+    bpm: 132,
+    chords: 'D A Bm G D A G A Em A D Bm Em A D D',
+    lead: [
+      'F#5 - - E5 - - D5 -',    'E5 - - C#5 - - A4 -',    'D5 - - C#5 - - B4 -',    'D5 - - - B4 - - -',
+      'F#5 - - E5 - - D5 -',    'E5 - - A5 - - G5 -',     'F#5 - - E5 - - D5 -',    'E5 - - - - - . .',
+      'G5 - F#5 - E5 - B4 -',   'C#5 - E5 - A5 - G5 -',   'F#5 - - - A5 - F#5 -',   'D5 - - - F#5 - B5 -',
+      'G5 - - F#5 E5 - F#5 G5', 'A5 - - G5 E5 - C#5 -',   'D5 - F#5 - A5 - D6 -',   'D6 - - - - - . .',
+    ],
+    bass: [0, 7, 12, 7, 0, 7, 12, 7],
+    harmony: 'arp',
+    drums: 'k.h.h.k.h.h.s.h.',
+  },
+  // Заставка, уровень 3 и финал: тёплая мелодия «дорога домой», до мажор
+  home: {
+    bpm: 112,
+    chords: 'C G Am F C G F G F G Em Am F G C C',
+    lead: [
+      'G4 - C5 - E5 - D5 C5',   'D5 - - - B4 - G4 -',     'A4 - C5 - E5 - D5 C5',   'C5 - - - A4 - - -',
+      'G4 - C5 - E5 - G5 -',    'G5 - F5 - D5 - B4 -',    'A4 - C5 - F5 - E5 D5',   'D5 - - - - - . .',
+      'A5 - - G5 F5 - - -',     'G5 - - F5 D5 - - -',     'E5 - - D5 E5 - G5 -',    'A5 - - - E5 - - -',
+      'F5 - - E5 D5 - C5 -',    'B4 - C5 - D5 - G5 -',    'E5 - - - D5 - C5 -',     'C5 - - - - - . .',
+    ],
+    bass: [0, null, 7, null, 12, null, 7, null],
+    harmony: 'broken',
+    drums: 'k...h.h.k...h.h.',
+  },
+};
+
+// Короткие мелодии-сигналы
+const JINGLES = {
+  clear:    ['G5 C6 E6 G6 - - E6 G6 - - - -', 170],
+  home:     ['C5 E5 G5 C6 - B5 C6 D6 E6 - - - - - - -', 150],
+  sad:      ['G4 - F#4 - F4 - E4 - - - - -', 200],
+  gameover: ['A4 - C5 - B4 - G#4 - A4 - - - - - - -', 110],
+};
+
+// Раскладываем песню по шестнадцатым долям: в каждой доле — список нот для разных инструментов
+function buildSong(def) {
+  const bars = def.chords.split(' ');
+  const steps = Array.from({ length: bars.length * 16 }, () => []);
+  def.lead.forEach((line, bar) => {
+    for (const n of parseMelody(line)) steps[bar * 16 + n.at * 2].push({ inst: 'lead', midi: n.midi, len: n.len * 2 });
+  });
+  bars.forEach((barName, bar) => {
+    const halves = barName.split('+');
+    for (let s = 0; s < 16; s++) {
+      const chord = parseChord(halves[halves.length > 1 && s >= 8 ? 1 : 0]);
+      const at = steps[bar * 16 + s];
+      // звук аккорда в диапазоне соль малой — фа-диез первой октавы, под мелодией
+      const chordNote = i => 55 + (chord.root + chord.tones[i] + 5) % 12;
+      if (s % 2 === 0 && def.bass[s / 2] !== null) {
+        let len = 2;                           // нота баса тянется до следующей — звук плотнее
+        while (s / 2 + len / 2 < 8 && def.bass[s / 2 + len / 2] === null) len += 2;
+        at.push({ inst: 'bass', midi: chord.bass + def.bass[s / 2], len });
+      }
+      if (def.harmony === 'arp') at.push({ inst: 'arp', midi: chordNote([0, 1, 2, 1][s % 4]), len: 1 });
+      if (def.harmony === 'stab' && s % 4 === 2) [0, 1, 2].forEach(i => at.push({ inst: 'stab', midi: chordNote(i), len: 1 }));
+      if (def.harmony === 'broken' && s % 2 === 0) at.push({ inst: 'arp', midi: chordNote([0, 1, 2, 1][(s / 2) % 4]), len: 2 });
+      const drum = { k: 'kick', s: 'snare', h: 'hat' }[def.drums[s]];
+      if (drum) at.push({ inst: drum });
+    }
+  });
+  return { bpm: def.bpm, steps };
+}
+const SONG_DATA = Object.fromEntries(Object.entries(SONGS).map(([name, def]) => [name, buildSong(def)]));
+
+// Сыграть одну ноту песни в нужный момент
+function playEvent(ev, time, stepDur) {
+  const dur = (ev.len || 1) * stepDur;
+  const f = ev.midi ? midiToFreq(ev.midi) : 0;
+  switch (ev.inst) {
+    case 'lead':  tone(musicBus, time, f, dur * 0.92, { wave: 'wide', vol: 0.2, sustain: 0.65, vibrato: dur > 0.35 ? 10 : 0 }); break;
+    case 'arp':   tone(musicBus, time, f, dur * 0.8, { wave: 'thin', vol: 0.055, sustain: 0.5 }); break;
+    case 'stab':  tone(musicBus, time, f, dur * 0.9, { wave: 'thin', vol: 0.045, sustain: 0.4 }); break;
+    case 'bass':  tone(musicBus, time, f, dur * 0.85, { wave: 'triangle', vol: 0.38, sustain: 0.9 }); break;
+    case 'kick':  tone(musicBus, time, 150, 0.12, { wave: 'triangle', vol: 0.5, slide: 45, sustain: 0.3 }); break;
+    case 'snare': noise(musicBus, time, 0.12, { vol: 0.16, type: 'bandpass', freq: 1800, q: 0.8 }); break;
+    case 'hat':   noise(musicBus, time, 0.035, { vol: 0.07, type: 'highpass', freq: 7000 }); break;
+  }
+}
+
+// Проигрыватель: каждый кадр заранее ставит в очередь ноты на ближайшие доли секунды
+const music = { name: '', song: null, step: 0, time: 0, paused: false };
+
+function playMusic(name) {
+  if (!actx || music.name === name) return;
+  stopMusic();
+  music.name = name;
+  music.song = SONG_DATA[name];
+  music.step = 0;
+  music.time = actx.currentTime + 0.08;
+}
+
+function stopMusic() {
+  music.name = '';
+  music.song = null;
+  music.paused = false;
+  if (!actx) return;
+  // Уже запланированные ноты глушим вместе со старым «проводом», а музыку дальше ведём по новому
+  const old = musicBus;
+  old.gain.setTargetAtTime(0, actx.currentTime, 0.02);
+  setTimeout(() => old.disconnect(), 400);
+  musicBus = newMusicBus();
+}
+
+function pauseMusic(paused) {
+  if (!actx || !music.song) return;
+  music.paused = paused;
+  musicBus.gain.setTargetAtTime(paused ? 0 : MUSIC_VOLUME, actx.currentTime, 0.02);
+  if (!paused) music.time = actx.currentTime + 0.05;
+}
+
+function updateMusic() {
+  if (!actx || !music.song || music.paused) return;
+  const stepDur = 60 / music.song.bpm / 4;
+  if (music.time < actx.currentTime - 0.25) music.time = actx.currentTime + 0.05;  // вкладка «спала» — не догоняем
+  while (music.time < actx.currentTime + 0.2) {
+    for (const ev of music.song.steps[music.step]) playEvent(ev, music.time, stepDur);
+    music.time += stepDur;
+    music.step = (music.step + 1) % music.song.steps.length;
+  }
+}
+
+function playJingle(name) {
+  if (!actx) return;
+  const [line, bpm] = JINGLES[name];
+  const stepDur = 60 / bpm / 2;
+  const t0 = actx.currentTime + 0.03;
+  for (const n of parseMelody(line)) {
+    const t = t0 + n.at * stepDur, d = n.len * stepDur * 0.95;
+    tone(sfxBus, t, midiToFreq(n.midi), d, { wave: 'wide', vol: 0.2, sustain: 0.7 });
+    tone(sfxBus, t, midiToFreq(n.midi - 12), d, { wave: 'triangle', vol: 0.3, sustain: 0.9 });
+  }
+}
+
+function toggleMute() {
+  muted = !muted;
+  try { localStorage.setItem('cat-home-muted', muted ? '1' : '0'); } catch (e) { /* не страшно */ }
+  if (actx) master.gain.setTargetAtTime(muted ? 0 : 0.7, actx.currentTime, 0.02);
+  showToast(muted ? 'ЗВУК ВЫКЛ' : 'ЗВУК ВКЛ');
+}
+
+// ---------------------------------------------------------------------
+// 7. УПРАВЛЕНИЕ: клавиатура и кнопки на экране телефона
+// ---------------------------------------------------------------------
+const input = { left: false, right: false, jump: false };   // что зажато прямо сейчас
+const pressed = {};                                          // что нажали в этом кадре
+
+// e.code — это физическая клавиша, поэтому WASD работает и в русской раскладке
+const KEYS = {
+  ArrowLeft: 'left', KeyA: 'left',
+  ArrowRight: 'right', KeyD: 'right',
+  ArrowUp: 'jump', KeyW: 'jump', Space: 'jump', KeyZ: 'jump',
+  Enter: 'start', NumpadEnter: 'start',
+  KeyP: 'pause', Escape: 'pause',
+  KeyM: 'mute',
+};
+
+function setKey(action, down) {
+  if (down && !input[action]) pressed[action] = true;
+  input[action] = down;
+}
+
+window.addEventListener('keydown', e => {
+  const action = KEYS[e.code];
+  if (!action) return;
+  e.preventDefault();             // стрелки и пробел двигают кошку, а не прокручивают страницу
+  initAudio();                    // звук браузер разрешает только после действия игрока
+  if (e.repeat) return;           // зажатая клавиша не «нажимается» много раз
+  if (action === 'mute') toggleMute();
+  else setKey(action, true);
+});
+window.addEventListener('keyup', e => {
+  const action = KEYS[e.code];
+  if (action && action !== 'mute') setKey(action, false);
+});
+
+// Ушли в другую вкладку или окно — отпускаем кнопки и ставим паузу
+function releaseAll() {
+  for (const k in input) input[k] = false;
+  document.querySelectorAll('.pad .on').forEach(b => b.classList.remove('on'));
+}
+window.addEventListener('blur', () => { releaseAll(); autoPause(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { releaseAll(); autoPause(); } });
+
+// Крестовина — одна зона: левая половина «влево», правая «вправо».
+// Большой палец можно не отрывать и просто перекатывать с одной стрелки на другую
+const dpad = document.querySelector('.dpad');
+let dpadFinger = null;
+function dpadMove(e) {
+  const box = dpad.getBoundingClientRect();
+  const left = e.clientX < box.left + box.width / 2;
+  setKey('left', left);
+  setKey('right', !left);
+  dpad.children[0].classList.toggle('on', left);
+  dpad.children[1].classList.toggle('on', !left);
+}
+function dpadEnd(e) {
+  if (e.pointerId !== dpadFinger) return;
+  dpadFinger = null;
+  setKey('left', false);
+  setKey('right', false);
+  for (const b of dpad.children) b.classList.remove('on');
+}
+// Палец уехал за край кнопки — всё равно следим за ним.
+// Некоторые браузеры этого не умеют — тогда просто работаем без «захвата»
+function capture(el, e) {
+  try { el.setPointerCapture(e.pointerId); } catch (err) { /* не страшно */ }
+}
+dpad.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  initAudio();
+  dpadFinger = e.pointerId;
+  capture(dpad, e);
+  dpadMove(e);
+});
+dpad.addEventListener('pointermove', e => { if (e.pointerId === dpadFinger) dpadMove(e); });
+dpad.addEventListener('pointerup', dpadEnd);
+dpad.addEventListener('pointercancel', dpadEnd);
+
+// Кнопки «A» (прыжок) и «СТАРТ»
+document.querySelectorAll('.pad [data-key]').forEach(btn => {
+  const action = btn.dataset.key;
+  const release = () => { setKey(action, false); btn.classList.remove('on'); };
+  btn.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    initAudio();
+    capture(btn, e);
+    setKey(action, true);
+    btn.classList.add('on');
+  });
+  btn.addEventListener('pointerup', release);
+  btn.addEventListener('pointercancel', release);
+});
+// Долгое нажатие не должно открывать меню «сохранить картинку» и т. п.
+document.querySelectorAll('.pad, canvas').forEach(el => el.addEventListener('contextmenu', e => e.preventDefault()));
+
+// Во весь экран — только там, где браузер это умеет (на iPhone кнопки не будет)
+const fullscreenBtn = document.getElementById('fullscreen');
+if (document.documentElement.requestFullscreen) {
+  fullscreenBtn.hidden = false;
+  fullscreenBtn.addEventListener('click', () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+      return;
+    }
+    document.documentElement.requestFullscreen()
+      .then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape'))
+      .catch(() => { /* не разрешили — играем как есть */ });
+  });
+}
+
+// Тап или клик по экрану игры — «дальше» на заставках (во время игры ничего не делает)
+canvas.addEventListener('pointerdown', () => {
+  initAudio();
+  if (state !== 'play') pressed.start = true;
+});
+
+// ---------------------------------------------------------------------
+// 8. МИР: карта, клетки, столкновения, подготовка картинок уровня
+// ---------------------------------------------------------------------
+let level = LEVELS[0];     // описание текущего уровня
+let theme = THEMES.morning;
+let tiles = [];            // карта: tiles[строка][столбец] — буква клетки
+let cols = 0;              // ширина уровня в клетках
+let objects = [];          // рыбки, мухоморы, ежи, флажки, дом...
+let effects = [];          // брызги, искры, дымок
+let popups = [];           // всплывающие надписи и облачка с репликами
+let bumps = [];            // коробки, которые подпрыгнули от удара головой
+let checkpoint = { x: 0, y: 0 };
+let camX = 0;              // насколько камера сдвинута вправо
+let bg = null;             // заранее нарисованный фон: небо, холмы, лес
+let levelCanvas = null;    // заранее нарисованные земля, камни и украшения всего уровня
+
+const SOLID = '#SLBb';     // клетки, сквозь которые не пройти
+const isSolid = t => SOLID.includes(t);
+
+function tileAt(tx, ty) {
+  if (ty < 0 || ty >= ROWS) return '.';   // выше и ниже карты — пустота
+  if (tx < 0 || tx >= cols) return '#';   // слева и справа — невидимая стена
+  return tiles[ty][tx];
+}
+
+// Двигаем объект по горизонтали; упёрся в стену — останавливаем. Возвращает true, если упёрся
+function moveX(e) {
+  e.x += e.vx;
+  const top = Math.floor(e.y / TILE), bottom = Math.floor((e.y + e.h - 0.01) / TILE);
+  if (e.vx > 0) {
+    const tx = Math.floor((e.x + e.w - 0.01) / TILE);
+    for (let ty = top; ty <= bottom; ty++) {
+      if (isSolid(tileAt(tx, ty))) { e.x = tx * TILE - e.w; e.vx = 0; return true; }
+    }
+  } else if (e.vx < 0) {
+    const tx = Math.floor(e.x / TILE);
+    for (let ty = top; ty <= bottom; ty++) {
+      if (isSolid(tileAt(tx, ty))) { e.x = (tx + 1) * TILE; e.vx = 0; return true; }
+    }
+  }
+  return false;
+}
+
+// Двигаем по вертикали: приземляемся на землю и мостики, бьёмся головой о потолок.
+// Если ударились головой — возвращает клетку, в которую ударились
+function moveY(e) {
+  const oldBottom = e.y + e.h;
+  e.y += e.vy;
+  e.onGround = false;
+  const left = Math.floor(e.x / TILE), right = Math.floor((e.x + e.w - 0.01) / TILE);
+  if (e.vy > 0) {
+    const ty = Math.floor((e.y + e.h - 0.01) / TILE);
+    for (let tx = left; tx <= right; tx++) {
+      const t = tileAt(tx, ty);
+      // На мостик «=» встаём, только если были над ним, — снизу он пропускает
+      if (isSolid(t) || (t === '=' && oldBottom <= ty * TILE + 0.01)) {
+        e.y = ty * TILE - e.h;
+        e.vy = 0;
+        e.onGround = true;
+        return null;
+      }
+    }
+  } else if (e.vy < 0) {
+    const ty = Math.floor(e.y / TILE);
+    let hit = null;
+    const center = e.x + e.w / 2;
+    for (let tx = left; tx <= right; tx++) {
+      if (!isSolid(tileAt(tx, ty))) continue;
+      // Из двух клеток над головой выбираем ту, что ближе к центру кошки
+      if (!hit || Math.abs(tx * TILE + 8 - center) < Math.abs(hit.tx * TILE + 8 - center)) hit = { tx, ty };
+    }
+    if (hit) {
+      e.y = (ty + 1) * TILE;
+      e.vy = 0;
+      return hit;
+    }
+  }
+  return null;
+}
+
+// Где в этом столбце поверхность воды
+function waterTop(tx) {
+  for (let ty = 0; ty < ROWS; ty++) if (tiles[ty][tx] === '~') return ty * TILE + 5;
+  return H + 100;
+}
+
+// ---- Картинки, которые рисуем один раз при загрузке уровня ----
+
+// Круг из пикселей
+function pixelCircle(g, cx, cy, r, color) {
+  g.fillStyle = color;
+  for (let dy = -r; dy <= r; dy++) {
+    const dx = Math.floor(Math.sqrt(r * r - dy * dy));
+    g.fillRect(cx - dx, cy + dy, dx * 2 + 1, 1);
+  }
+}
+
+// Силуэт ёлки из трёх ярусов-«ступенек»
+function pineSilhouette(g, cx, bottom, h, color) {
+  g.fillStyle = color;
+  const tier = Math.max(4, Math.floor(h / 3));
+  for (let y = 0; y < h; y++) {
+    const t = Math.min(2, Math.floor(y / tier)), yin = y - t * tier;
+    const hw = Math.floor(yin * 0.6) + t * 2 + 1;
+    g.fillRect(cx - hw, bottom - h + y, hw * 2 + 1, 1);
+  }
+}
+
+// Фон: небо с солнцем, облако, дальние холмы и два ряда леса.
+// Холмы и лес шириной 512 пикселей повторяются по кругу и едут медленнее земли — так кажется, что они далеко
+function buildBackground(th) {
+  const sky = makeCanvas(W, H, g => {
+    // Небо — ровными полосами: плавных градиентов у старых приставок не было
+    th.sky.forEach((color, i) => rect(g, 0, i * 30, W, i === th.sky.length - 1 ? H : 30, color));
+    const s = th.sun;
+    pixelCircle(g, s.x, s.y, s.r + 3, s.glow);
+    pixelCircle(g, s.x, s.y, s.r, s.color);
+    if (s.stripes) {   // полоски на закатном солнце
+      [[4, 1], [8, 2], [12, 2], [16, 3]].forEach(([dy, h]) => rect(g, s.x - s.r - 3, s.y + dy, (s.r + 3) * 2 + 1, h, th.sky[4]));
+    }
+  });
+  const cloud = makeCanvas(40, 16, g => {
+    const puffs = [[11, 10, 6], [20, 7, 8], [29, 10, 6]];
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 40; x++) {
+        if (puffs.some(([cx, cy, r]) => (x - cx) ** 2 + (y - cy) ** 2 <= r * r)) rect(g, x, y, 1, 1, th.cloud[y >= 12 ? 1 : 0]);
+      }
+    }
+  });
+  const hills = makeCanvas(512, H, g => {
+    for (let x = 0; x < 512; x++) {
+      const k = 2 * Math.PI * x / 512;
+      const top = Math.round(120 - 16 * Math.sin(2 * k + 0.6) - 8 * Math.sin(5 * k + 2.1) - 3 * Math.sin(11 * k));
+      rect(g, x, top, 1, H - top, th.hills);
+      rect(g, x, top, 1, 1, th.hillsRim);
+    }
+  });
+  const forest = (color, spacing, minH, maxH, seed) => makeCanvas(512, H, g => {
+    rect(g, 0, GROUND_Y - 6, 512, H, color);
+    for (let x = 0; x < 512; x += spacing) {
+      const h = minH + Math.floor(rnd(x + seed) * (maxH - minH));
+      const cx = x + Math.floor(rnd(x * 3 + seed) * spacing * 0.6);
+      for (const shift of [-512, 0, 512]) pineSilhouette(g, cx + shift, GROUND_Y - 4, h, color);
+    }
+  });
+  return {
+    sky, cloud, hills,
+    mid: forest(th.forestFar, 13, 22, 40, 1),
+    near: forest(th.forestNear, 19, 34, 58, 7),
+  };
+}
+
+// Кружок листвы с тенью и бликами
+function leafBlob(g, cx, cy, r, [light, mid, dark]) {
+  pixelCircle(g, cx, cy, r, dark);
+  pixelCircle(g, cx - 1, cy - 1, r - 2, mid);
+  for (let i = 0; i < 4; i++) {
+    rect(g, cx - r / 2 + Math.floor(rnd(cx * 7 + i) * r), cy - r / 2 + Math.floor(rnd(cy * 5 + i) * r * 0.8), 2, 1, light);
+  }
+}
+
+// Украшения: ёлка, берёза, куст, забор
+function buildDecor(th) {
+  const trunk = '#6c3c14';
+  const pine = makeCanvas(32, 60, g => {
+    rect(g, 14, 50, 4, 10, trunk);
+    for (const t of [{ bottom: 53, h: 20, hw: 14 }, { bottom: 38, h: 18, hw: 11 }, { bottom: 24, h: 18, hw: 8 }]) {
+      for (let i = 0; i < t.h; i++) {
+        const y = t.bottom - t.h + i, hw = Math.round((i + 1) / t.h * t.hw);
+        rect(g, 16 - hw, y, hw * 2, 1, th.leaves[2]);
+        rect(g, 16 - hw, y, hw, 1, th.leaves[1]);
+        if (i % 3 === 0) rect(g, 16 - hw, y, 2, 1, th.leaves[0]);
+      }
+    }
+  });
+  const birch = makeCanvas(32, 72, g => {
+    rect(g, 14, 18, 4, 54, '#f0f0e8');
+    rect(g, 17, 18, 1, 54, '#b8b8b0');
+    for (let y = 26, i = 0; y < 70; y += 7, i++) rect(g, 14 + (i % 2), y, 2, 1, '#202020');
+    leafBlob(g, 10, 18, 9, th.leaves);
+    leafBlob(g, 22, 12, 10, th.leaves);
+    leafBlob(g, 23, 25, 7, th.leaves);
+    leafBlob(g, 12, 29, 6, th.leaves);
+  });
+  const bush = makeCanvas(32, 16, g => {
+    leafBlob(g, 9, 11, 7, th.leaves);
+    leafBlob(g, 23, 11, 7, th.leaves);
+    leafBlob(g, 16, 8, 8, th.leaves);
+    rect(g, 2, 15, 28, 1, th.leaves[2]);
+  });
+  const fence = makeCanvas(16, 16, g => {
+    for (const y of [6, 11]) { rect(g, 0, y, 16, 2, '#c08040'); rect(g, 0, y + 1, 16, 1, '#7c4818'); }
+    for (const x of [2, 10]) {
+      rect(g, x, 3, 4, 13, '#c88c48');
+      rect(g, x, 3, 1, 13, '#e8b878');
+      rect(g, x + 3, 3, 1, 13, '#7c4818');
+      rect(g, x + 1, 2, 2, 1, '#c88c48');
+    }
+  });
+  return { pine, birch, bush, fence };
+}
+
+// ---- Клетки карты ----
+function drawGroundTile(g, x, y, seed, open, th) {
+  const [dirt, crumb, dark] = th.dirt;
+  rect(g, x, y, TILE, TILE, dirt);
+  for (let i = 0; i < 5; i++) {   // камешки и крошки
+    rect(g, x + 1 + Math.floor(rnd(seed + i * 1.7) * 13), y + 2 + Math.floor(rnd(seed + i * 3.1 + 9) * 13), 2, 1, i % 2 ? crumb : dark);
+  }
+  if (open.left) rect(g, x, y, 1, TILE, dark);        // край обрыва
+  if (open.right) rect(g, x + 15, y, 1, TILE, dark);
+  if (!open.top) return;
+  const [light, grass, deep] = th.grass;               // сверху растёт трава
+  rect(g, x, y, TILE, 4, grass);
+  rect(g, x, y, TILE, 1, light);
+  for (let i = 0; i < TILE; i += 2) rect(g, x + i, y + 4, 2, rnd(seed + i) < 0.5 ? 1 : 2, deep);
+  const r = rnd(seed * 3.3);                           // травинки и цветочки
+  if (r < 0.3) {
+    rect(g, x + 4, y - 2, 1, 2, grass);
+    rect(g, x + 6, y - 3, 1, 3, light);
+    rect(g, x + 8, y - 2, 1, 2, grass);
+  } else if (r < 0.42) {
+    rect(g, x + 10, y - 3, 1, 3, deep);
+    rect(g, x + 9, y - 4, 3, 1, r < 0.36 ? '#f8f8f8' : '#fcd800');
+    rect(g, x + 10, y - 4, 1, 1, '#f87858');
+  }
+}
+
+function drawStoneTile(g, x, y) {
+  rect(g, x + 1, y, 14, 16, '#3c3c3c');
+  rect(g, x, y + 1, 16, 14, '#3c3c3c');
+  rect(g, x + 1, y + 1, 14, 14, '#9c9c9c');
+  rect(g, x + 2, y + 2, 6, 2, '#d8d8d8');
+  rect(g, x + 2, y + 2, 2, 5, '#d8d8d8');
+  rect(g, x + 1, y + 13, 14, 2, '#6c6c6c');
+  rect(g, x + 13, y + 3, 2, 11, '#6c6c6c');
+  rect(g, x + 9, y + 7, 2, 1, '#6c6c6c');
+}
+
+function drawLogTile(g, x, y, leftEnd, rightEnd) {
+  rect(g, x, y + 1, TILE, 15, '#8c5424');
+  rect(g, x, y + 1, TILE, 1, '#4c2808');
+  rect(g, x, y + 2, TILE, 2, '#b07038');
+  rect(g, x, y + 7, TILE, 1, '#6c3c14');
+  rect(g, x, y + 11, TILE, 1, '#6c3c14');
+  rect(g, x, y + 15, TILE, 1, '#4c2808');
+  for (const [end, ex] of [[leftEnd, x], [rightEnd, x + 11]]) {
+    if (!end) continue;                                 // спил бревна с кольцами
+    rect(g, ex, y + 2, 5, 13, '#4c2808');
+    rect(g, ex + 1, y + 3, 3, 11, '#e0b878');
+    rect(g, ex + 2, y + 6, 1, 5, '#a87840');
+  }
+}
+
+function drawPlankTile(g, x, y) {
+  rect(g, x, y, TILE, 5, '#c07830');
+  rect(g, x, y, TILE, 1, '#e8a860');
+  rect(g, x, y + 4, TILE, 1, '#6c3810');
+  rect(g, x + 7, y + 1, 1, 3, '#6c3810');
+  rect(g, x + 2, y + 2, 1, 1, '#3c1c08');
+  rect(g, x + 12, y + 2, 1, 1, '#3c1c08');
+}
+
+// Всю неподвижную часть уровня рисуем один раз в большую картинку.
+// Потом каждый кадр просто показываем её нужный кусок — так быстрее
+function renderLevel(decor) {
+  const D = buildDecor(theme);
+  return makeCanvas(cols * TILE, ROWS * TILE, g => {
+    for (const d of decor) {
+      const ground = d.y + TILE;          // украшение стоит на земле под своей клеткой
+      if (d.ch === 't') g.drawImage(D.pine, d.x - 8, ground - 60);
+      if (d.ch === 'T') g.drawImage(D.birch, d.x - 8, ground - 72);
+      if (d.ch === '*') g.drawImage(D.bush, d.x - 8, ground - 16);
+      if (d.ch === 'F') g.drawImage(D.fence, d.x, ground - 16);
+    }
+    for (let ty = 0; ty < ROWS; ty++) {
+      for (let tx = 0; tx < cols; tx++) {
+        const t = tiles[ty][tx], x = tx * TILE, y = ty * TILE;
+        if (t === '#') {
+          drawGroundTile(g, x, y, tx * 31 + ty * 7, {
+            top: !isSolid(tileAt(tx, ty - 1)),
+            left: !isSolid(tileAt(tx - 1, ty)),
+            right: !isSolid(tileAt(tx + 1, ty)),
+          }, theme);
+        }
+        if (t === 'S') drawStoneTile(g, x, y);
+        if (t === 'L') drawLogTile(g, x, y, tileAt(tx - 1, ty) !== 'L', tileAt(tx + 1, ty) !== 'L');
+        if (t === '=') drawPlankTile(g, x, y);
+      }
+    }
+  });
+}
+
+// Загружаем уровень: разбираем карту, расставляем объекты, рисуем картинки
+function loadLevel(index) {
+  level = LEVELS[index];
+  theme = THEMES[level.theme];
+  tiles = level.map.map(row => row.split(''));
+  cols = tiles[0].length;
+  objects = [];
+  effects = [];
+  popups = [];
+  bumps = [];
+  const decor = [];
+  for (let ty = 0; ty < ROWS; ty++) {
+    for (let tx = 0; tx < cols; tx++) {
+      const ch = tiles[ty][tx], x = tx * TILE, y = ty * TILE;
+      if (ch === 'P') {
+        placeCat(x, y);
+        checkpoint = { x, y };
+        if (level.startInBox) {
+          cat.inBox = true;
+          cat.hidden = true;
+          objects.push({ type: 'startbox', x: x - 4, y, t: 0, open: false, peek: 9 });
+        }
+      } else if (ch === 'o') objects.push({ type: 'fish', x: x + 2, y: y + 4, w: 12, h: 8, phase: tx });
+      else if (ch === 'M') objects.push({ type: 'shroom', x: x + 3, y: y + 5, w: 10, h: 11, sx: x, sy: y });
+      else if (ch === 'h') objects.push({ type: 'hog', x: x + 1, y: y + 6, w: 14, h: 10, homeX: x + 1, vx: 0, vy: 0, dir: -1, anim: 0, active: false });
+      else if (ch === 'f') {
+        objects.push({ type: 'jumper', homeX: x + 4, x: x + 4, y: GROUND_Y + 8, w: 8, h: 12, vy: 0, wait: 40 + (tx % 4) * 25, flying: false });
+        tiles[ty][tx] = '~';
+        continue;
+      } else if (ch === 'C') objects.push({ type: 'flag', x, y, active: false, raise: 0 });
+      else if (ch === 'E') objects.push({ type: 'exit', x, y });
+      else if (ch === 'D') objects.unshift({ type: 'house', x, y, door: 0, guests: false });   // в начало списка: дом рисуется позади всех
+      else if (ch === 'G') objects.push({ type: 'girl', x, y: y + TILE - 24, happy: false, inside: false, walk: 0 });
+      else if ('tT*F'.includes(ch)) decor.push({ ch, x, y });
+      else continue;                      // клетки карты (#, ~, S, L, =, B) остаются как есть
+      tiles[ty][tx] = '.';
+    }
+  }
+  bg = buildBackground(theme);
+  levelCanvas = renderLevel(decor);
+  camX = clamp(cat.x - W * 0.4, 0, cols * TILE - W);
+}
+
+// ---------------------------------------------------------------------
+// 9. КОШКА ЛАПКА
+// ---------------------------------------------------------------------
+const cat = {
+  x: 0, y: 0, w: 16, h: 12,      // «коробка» столкновений — меньше картинки 24×16
+  vx: 0, vy: 0,
+  onGround: false,
+  facing: 1,                     // 1 — смотрит вправо, −1 — влево
+  coyote: 0,                     // ещё пару кадров после края обрыва прыгать можно
+  jumpBuffer: 0,                 // нажал прыжок чуть раньше приземления — всё равно прыгнет
+  anim: 0, blink: 0,
+  invuln: 0,                     // после возрождения кошка мигает и ничего не боится
+  hidden: false, inBox: false, dead: false, deathReason: '',
+};
+
+// Ставим кошку на клетку (x, y) — лапами на землю
+function placeCat(x, y) {
+  Object.assign(cat, {
+    x, y: y + TILE - cat.h, vx: 0, vy: 0, onGround: true, facing: 1,
+    coyote: 0, jumpBuffer: 0, anim: 0, invuln: 0,
+    hidden: false, inBox: false, dead: false,
+  });
+}
+
+function updateCat() {
+  // Разгон и торможение: кошка не стартует и не останавливается мгновенно
+  const dir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+  if (dir !== 0) {
+    cat.vx += dir * (cat.onGround ? 0.25 : 0.18);
+    cat.facing = dir;
+  } else {
+    cat.vx *= cat.onGround ? 0.7 : 0.93;
+    if (Math.abs(cat.vx) < 0.05) cat.vx = 0;
+  }
+  cat.vx = clamp(cat.vx, -RUN_SPEED, RUN_SPEED);
+
+  // Прыжок. Два «запаса» делают управление мягким:
+  // coyote — можно прыгнуть, даже если уже чуть сошёл с края,
+  // jumpBuffer — нажатие незадолго до приземления не пропадает
+  if (pressed.jump) cat.jumpBuffer = 8;
+  else if (cat.jumpBuffer > 0) cat.jumpBuffer--;
+  cat.coyote = cat.onGround ? 7 : Math.max(0, cat.coyote - 1);
+  if (cat.jumpBuffer > 0 && cat.coyote > 0) {
+    cat.vy = -JUMP_SPEED;
+    cat.jumpBuffer = 0;
+    cat.coyote = 0;
+    cat.onGround = false;
+    sfx.jump();
+    dust(cat.x + cat.w / 2, cat.y + cat.h);
+  }
+  // Кнопку отпустили раньше — прыжок пониже. Но даже самый короткий тап
+  // (на телефоне так и тапают) даёт прыжок, которого хватает на мухомор и ручей
+  if (!input.jump && cat.vy < -4.5) cat.vy = -4.5;
+
+  // Падение и движение с учётом стен, земли и мостиков
+  const wasInAir = !cat.onGround, fallSpeed = cat.vy;
+  cat.vy = Math.min(cat.vy + GRAVITY, MAX_FALL);
+  moveX(cat);
+  const head = moveY(cat);
+  if (head) hitFromBelow(head);
+  if (cat.onGround && wasInAir && fallSpeed > 3) dust(cat.x + cat.w / 2, cat.y + cat.h);
+
+  // Анимация: бег, моргание, мигание после возрождения
+  if (cat.onGround && Math.abs(cat.vx) > 0.3) cat.anim += Math.abs(cat.vx) * 0.13;
+  else cat.anim = 0;
+  if (cat.blink > 0) cat.blink--;
+  else if (Math.random() < 0.006) cat.blink = 8;
+  if (cat.invuln > 0) cat.invuln--;
+
+  // Вода и пропасть
+  const tx = Math.floor((cat.x + cat.w / 2) / TILE), feet = cat.y + cat.h;
+  if (tx >= 0 && tx < cols && tileAt(tx, Math.floor((feet - 1) / TILE)) === '~' && feet > waterTop(tx) + 4) {
+    killCat('water');
+  } else if (cat.y > H + 24) {
+    killCat('fall');
+  }
+}
+
+// Кошка ударилась головой о клетку снизу
+function hitFromBelow({ tx, ty }) {
+  if (tileAt(tx, ty) !== 'B') {
+    sfx.bonk();
+    return;
+  }
+  tiles[ty][tx] = 'b';                  // коробка опустела
+  bumps.push({ tx, ty, t: 0 });
+  sfx.box();
+  effects.push({ img: SPR.fish, x: tx * TILE + 2, y: ty * TILE - 8, vx: 0, vy: -2.6, gravity: 0.12, life: 30 });
+  collectFish(tx * TILE + 8, ty * TILE - 6);
+}
+
+function collectFish(x, y) {
+  fishCount++;
+  score += 100;
+  sfx.fish();
+  sparkle(x, y);
+  if (fishCount % FISH_FOR_LIFE === 0) {
+    if (lives < START_LIVES) {
+      lives++;
+      sfx.life();
+      popup(x, y - 10, '+1 ♥', '#f85878');
+    } else {
+      score += 1000;
+      popup(x, y - 10, '+1000', '#fce060');
+    }
+  }
+}
+
+function killCat(reason) {
+  if (state !== 'play') return;
+  state = 'dying';
+  timer = 0;
+  lives--;
+  cat.dead = true;
+  cat.deathReason = reason;
+  cat.vx = 0;
+  cat.vy = 0;
+  stopMusic();
+  if (reason === 'water') {
+    const tx = Math.floor((cat.x + cat.w / 2) / TILE);
+    splash(cat.x + cat.w / 2, waterTop(tx));
+    sfx.splash();
+    cat.hidden = true;                  // кошка скрылась под водой
+  } else {
+    sfx.hurt();
+  }
+}
+
+function updateDying() {
+  // Мухомор или ёж: кошка подпрыгивает и падает с экрана вверх лапами
+  if (cat.deathReason !== 'water' && cat.deathReason !== 'fall') {
+    if (timer === 25) cat.vy = -5;
+    if (timer > 25) {
+      cat.vy = Math.min(cat.vy + GRAVITY, MAX_FALL);
+      cat.y += cat.vy;
+    }
+  }
+  if (timer === 30) playJingle('sad');
+  if (timer < 120) return;
+  if (lives > 0) {
+    respawn();
+  } else {
+    state = 'gameover';
+    timer = 0;
+    saveRecord();
+    playJingle('gameover');
+  }
+}
+
+// Возвращаемся к последнему флажку
+function respawn() {
+  placeCat(checkpoint.x, checkpoint.y);
+  cat.invuln = 120;
+  camX = clamp(cat.x - W * 0.4, 0, cols * TILE - W);
+  state = 'play';
+  timer = 0;
+  playMusic(level.music);
+}
+
+function updateCamera() {
+  const target = cat.x + cat.w / 2 - W * 0.4;   // кошка чуть левее центра — видно, что впереди
+  camX += (target - camX) * 0.12;
+  camX = clamp(camX, 0, cols * TILE - W);
+}
+
+// ---------------------------------------------------------------------
+// 10. ОБЪЕКТЫ: рыбки, мухоморы, ежи, рыбы в реке, флажки, выход, дом
+// ---------------------------------------------------------------------
+function updateObjects() {
+  // Для опасностей берём «коробку» кошки поменьше: задеть мухомор краешком не страшно
+  const hurtBox = { x: cat.x + 3, y: cat.y + 3, w: cat.w - 6, h: cat.h - 4 };
+  const catReady = !cat.inBox && !cat.hidden;
+  const safe = cat.invuln > 0;
+  for (const o of objects) {
+    switch (o.type) {
+      case 'fish':
+        if (catReady && overlap(cat, o)) {
+          o.taken = true;
+          collectFish(o.x + 6, o.y + 4);
+        }
+        break;
+      case 'shroom':
+        if (catReady && !safe && overlap(hurtBox, o)) killCat('shroom');
+        break;
+      case 'hog':
+        updateHog(o);
+        if (catReady && !safe && overlap(hurtBox, o)) killCat('hog');
+        break;
+      case 'jumper':
+        updateJumper(o);
+        if (catReady && o.flying && overlap(cat, o)) {
+          o.taken = true;
+          score += 500;
+          sfx.catch();
+          sparkle(o.x + 4, o.y + 6);
+          popup(o.x + 4, o.y - 6, 'НЯМ! +500', '#fce060');
+        }
+        break;
+      case 'flag':
+        if (o.active) o.raise++;
+        else if (catReady && cat.x > o.x - 8) {
+          o.active = true;
+          checkpoint = { x: o.x, y: o.y };
+          sfx.flag();
+          popup(o.x + 8, o.y - 32, 'СОХРАНЕНО', '#fcfcfc');
+        }
+        break;
+      case 'exit':
+        if (catReady && cat.x + cat.w / 2 > o.x + 8) levelClear();
+        break;
+      case 'house':
+        houseSmoke(o);
+        // Если у дома никто не ждёт, игра заканчивается у двери
+        if (catReady && !objects.some(g => g.type === 'girl') && cat.x + cat.w / 2 > o.x - 10) reachHome();
+        break;
+      case 'girl':
+        // Соня зовёт кошку, когда та уже близко, а встреча с ней — конец игры
+        if (catReady && Math.abs(o.x - cat.x) < 220 && frameCount % 170 === 0) bubble(o.x + 8, o.y - 2, 'КИС-КИС!', 80);
+        if (catReady && cat.x + cat.w > o.x - 6) reachHome();
+        break;
+    }
+    if (state !== 'play') break;      // кошка погибла или уровень закончился — дальше не проверяем
+  }
+  objects = objects.filter(o => !o.taken);
+}
+
+// Ёжик ходит туда-сюда около своего места: у стены, у края обрыва
+// и в двух с половиной клетках от дома поворачивает — так его легко обойти
+function updateHog(o) {
+  if (!o.active) {
+    if (o.x > camX + W + 32) return;  // оживает, только когда появится на экране
+    o.active = true;
+  }
+  if (Math.abs(o.x - o.homeX) > 40 && Math.sign(o.x - o.homeX) === o.dir) o.dir = -o.dir;
+  o.vx = o.dir * 0.35;
+  if (moveX(o)) o.dir = -o.dir;
+  o.vy = Math.min(o.vy + GRAVITY, MAX_FALL);
+  moveY(o);
+  if (o.onGround) {
+    const aheadX = o.dir > 0 ? o.x + o.w + 1 : o.x - 1;
+    const ahead = tileAt(Math.floor(aheadX / TILE), Math.floor((o.y + o.h + 2) / TILE));
+    if (!isSolid(ahead) && ahead !== '=') o.dir = -o.dir;
+  }
+  if (o.y > H + 32) o.taken = true;
+  o.anim++;
+}
+
+// Рыба в реке время от времени выпрыгивает — поймай её в прыжке
+function updateJumper(o) {
+  if (!o.flying) {
+    if (--o.wait > 0) return;
+    if (Math.abs(o.homeX - (camX + W / 2)) > W * 0.75) {   // прыгает, только когда кошка рядом
+      o.wait = 30;
+      return;
+    }
+    o.flying = true;
+    o.x = o.homeX;
+    o.y = GROUND_Y + 8;
+    o.vy = -5.4;
+    splash(o.x + 4, GROUND_Y + 5, 5);
+    sfx.drip();
+    return;
+  }
+  o.vy += 0.16;
+  o.y += o.vy;
+  if (o.vy > 0 && o.y > GROUND_Y + 8) {
+    o.flying = false;
+    o.wait = 100 + Math.floor(Math.random() * 80);
+    splash(o.x + 4, GROUND_Y + 5, 5);
+  }
+}
+
+// Начало игры: коробка шуршит, открывается, кошка выглядывает и выпрыгивает
+function updateStartBox(box) {
+  box.t++;
+  box.shake = (box.t > 25 && box.t < 45) || (box.t > 60 && box.t < 80);
+  if (box.t === 26 || box.t === 61) sfx.rustle();
+  if (box.t === 95) {
+    box.open = true;
+    sfx.pop();
+  }
+  if (box.open) box.peek = Math.max(0, 9 - (box.t - 95));   // голова медленно поднимается
+  if (box.t === 112) bubble(box.x + 12, box.y - 4, 'ГДЕ Я?', 70);
+  if (box.t === 190) {
+    cat.inBox = false;
+    cat.hidden = false;
+    cat.x = box.x + 4;
+    cat.y = box.y + 2;
+    cat.vx = 1.2;
+    cat.vy = -5.2;
+    cat.onGround = false;
+    cat.facing = 1;
+    sfx.meow();
+    playMusic(level.music);
+  }
+}
+
+// Дым из трубы дома
+function houseSmoke(o) {
+  if (frameCount % 24 === 0) {
+    effects.push({ x: o.x + 32, y: o.y + TILE - 104, vx: 0.15, vy: -0.35, gravity: 0, life: 90, color: '#e8e0d8', size: 2 });
+  }
+}
+
+// ---------------------------------------------------------------------
+// 11. ЭФФЕКТЫ: пыль, искры, брызги, всплывающие надписи
+// ---------------------------------------------------------------------
+function particle(x, y, vx, vy, color, life, gravity = 0.15, size = 1) {
+  effects.push({ x, y, vx, vy, color, life, gravity, size });
+}
+function dust(x, y) {
+  for (let i = 0; i < 4; i++) particle(x + (Math.random() - 0.5) * 10, y - 1, (Math.random() - 0.5) * 0.8, -Math.random() * 0.5, '#e8dcc0', 14, 0.02);
+}
+function sparkle(x, y) {
+  for (let i = 0; i < 6; i++) {
+    const a = i / 6 * Math.PI * 2;
+    particle(x, y, Math.cos(a) * 1.2, Math.sin(a) * 1.2, i % 2 ? '#fcfcfc' : '#f8d800', 16, 0);
+  }
+}
+function splash(x, y, count = 14) {
+  for (let i = 0; i < count; i++) {
+    particle(x + (Math.random() - 0.5) * 10, y, (Math.random() - 0.5) * 2, -1.5 - Math.random() * 2.5,
+      i % 3 ? theme.water[0] : '#fcfcfc', 40, 0.18, 2);
+  }
+}
+function popup(x, y, str, color = '#fcfcfc') { popups.push({ x, y, text: str, color, t: 55 }); }
+function bubble(x, y, str, t = 90) { popups.push({ x, y, text: str, bubble: true, t }); }
+
+let toast = { text: '', t: 0 };
+function showToast(str) { toast = { text: str, t: 90 }; }
+
+function updateEffects() {
+  for (const p of effects) {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += p.gravity;
+    p.life--;
+  }
+  effects = effects.filter(p => p.life > 0);
+  for (const p of popups) {
+    p.t--;
+    if (!p.bubble) p.y -= 0.5;
+  }
+  popups = popups.filter(p => p.t > 0);
+  for (const b of bumps) b.t++;
+  bumps = bumps.filter(b => b.t < BUMP.length);
+}
+const BUMP = [0, 2, 4, 5, 5, 4, 2, 1];   // как подпрыгивает коробка от удара, по кадрам
+
+// ---------------------------------------------------------------------
+// 12. РИСОВАНИЕ
+// ---------------------------------------------------------------------
+
+// Слой фона шириной 512 повторяется по кругу
+function drawLayer(img, offset, y = 0) {
+  const x = -Math.floor(((offset % img.width) + img.width) % img.width);
+  ctx.drawImage(img, x, y);
+  if (x + img.width < W) ctx.drawImage(img, x + img.width, y);
+}
+
+// Чем дальше слой, тем медленнее он едет — получается объём
+function drawBackground(b, cx) {
+  ctx.drawImage(b.sky, 0, 0);
+  for (let i = 0; i < 5; i++) {            // облака плывут сами по себе
+    const span = 520;
+    const x = ((i * 113 + 40 - cx * 0.08 - frameCount * 0.04) % span + span) % span - 60;
+    ctx.drawImage(b.cloud, Math.round(x), 14 + (i * 37) % 60);
+  }
+  drawLayer(b.hills, cx * 0.12);
+  drawLayer(b.mid, cx * 0.25);
+  drawLayer(b.near, cx * 0.45);
+}
+
+// Коробка с рыбкой (или уже пустая)
+function drawBox(x, y, full) {
+  rect(ctx, x, y, 16, 16, '#3c1c08');
+  rect(ctx, x + 1, y + 1, 14, 14, full ? '#d09850' : '#9c7040');
+  rect(ctx, x + 1, y + 1, 14, 2, full ? '#ecc080' : '#b08050');
+  rect(ctx, x + 1, y + 12, 14, 3, full ? '#a87030' : '#7c5028');
+  rect(ctx, x + 7, y + 1, 2, 5, '#ecd8a8');                 // скотч
+  if (!full) return;
+  const c = frameCount % 50 < 8 ? '#fcfcfc' : '#f8b800';    // рыбка на коробке поблёскивает
+  rect(ctx, x + 5, y + 7, 6, 3, c);
+  rect(ctx, x + 3, y + 7, 1, 1, c);
+  rect(ctx, x + 3, y + 9, 1, 1, c);
+  rect(ctx, x + 4, y + 8, 1, 1, c);
+  rect(ctx, x + 9, y + 8, 1, 1, '#3c1c08');
+}
+
+function drawBoxes(cx) {
+  const c0 = Math.floor(cx / TILE), c1 = c0 + Math.ceil(W / TILE);
+  for (let ty = 0; ty < ROWS; ty++) {
+    for (let tx = c0; tx <= c1; tx++) {
+      const t = tileAt(tx, ty);
+      if (t !== 'B' && t !== 'b') continue;
+      const bump = bumps.find(b => b.tx === tx && b.ty === ty);
+      drawBox(tx * TILE - cx, ty * TILE - (bump ? BUMP[bump.t] : 0), t === 'B');
+    }
+  }
+}
+
+// Вода рисуется поверх кошки — так она «уходит под воду»
+function drawWater(cx) {
+  const [light, mid, deep] = theme.water;
+  const c0 = Math.max(0, Math.floor(cx / TILE)), c1 = Math.min(cols - 1, c0 + Math.ceil(W / TILE));
+  for (let tx = c0; tx <= c1; tx++) {
+    for (let ty = 0; ty < ROWS; ty++) {
+      const t = tiles[ty][tx], x = tx * TILE - cx, y = ty * TILE;
+      if (t === '=' && tileAt(tx, ty + 1) === '~') {         // вода под мостиком
+        rect(ctx, x, y + 6, TILE, TILE - 6, mid);
+        continue;
+      }
+      if (t !== '~') continue;
+      const above = tileAt(tx, ty - 1);
+      if (above === '~' || above === '=') {
+        rect(ctx, x, y, TILE, TILE, deep);
+        if ((tx + ty) % 3 === 0) rect(ctx, x + 4, y + 6, 3, 1, mid);
+        continue;
+      }
+      rect(ctx, x, y + 5, TILE, TILE - 5, mid);                // поверхность
+      rect(ctx, x, y + 5, TILE, 2, light);
+      const shift = (Math.floor(frameCount / 6) + tx * 5) % 13;   // бегущие блики
+      rect(ctx, x + shift, y + 5, 3, 1, '#fcfcfc');
+      rect(ctx, x + (shift + 7) % 14, y + 10, 2, 1, light);
+    }
+  }
+}
+
+function drawFlag(o, x) {
+  const base = o.y + TILE, top = base - 30;
+  rect(ctx, x + 7, top, 2, 30, '#8c8c8c');
+  rect(ctx, x + 7, top, 1, 30, '#e0e0e0');
+  rect(ctx, x + 6, top - 2, 4, 3, '#f8b800');
+  const lift = o.active ? Math.min(1, o.raise / 30) : 0;
+  const fy = Math.round(base - 12 - lift * 16);
+  const color = o.active ? '#e82818' : '#a8a8a8';
+  const wave = o.active && Math.floor(frameCount / 10) % 2 ? 1 : 0;
+  for (let i = 0; i < 7; i++) rect(ctx, x + 9, fy + i + (i > 3 ? wave : 0), 9 - Math.abs(i - 3) * 2, 1, color);
+}
+
+function drawExitSign(x, y) {
+  const base = y + TILE;
+  rect(ctx, x + 6, base - 26, 4, 26, '#5c3010');
+  rect(ctx, x + 7, base - 26, 1, 26, '#8c5424');
+  rect(ctx, x - 13, base - 34, 42, 13, '#3c1c08');
+  rect(ctx, x - 12, base - 33, 40, 11, '#d8a050');
+  rect(ctx, x - 12, base - 33, 40, 1, '#f0c880');
+  text('ДОМОЙ→', x - 9, base - 31, { color: '#4c2408' });
+}
+
+// Дом, куда кошка так спешила: бревенчатые стены, красная крыша, в окне горит свет
+function drawHouse(o, x) {
+  const g = o.y + TILE;                   // земля
+  const left = x - 40;
+  rect(ctx, x + 27, g - 100, 12, 36, '#8c3c1c');                 // труба
+  rect(ctx, x + 25, g - 102, 16, 3, '#4c1c0c');
+  for (let i = 0; i < 7; i++) {                                  // стены из брёвен
+    const y = g - 56 + i * 8;
+    rect(ctx, left, y, 96, 8, i % 2 ? '#9c5a24' : '#b06a2c');
+    rect(ctx, left, y + 7, 96, 1, '#5c3010');
+    rect(ctx, left - 3, y + 1, 4, 6, '#d8a060');                 // торцы брёвен
+    rect(ctx, left + 95, y + 1, 4, 6, '#d8a060');
+  }
+  for (let i = 0; i < 36; i++) {                                 // крыша
+    const hw = 58 - Math.floor(i * 1.55);
+    rect(ctx, x + 8 - hw, g - 57 - i, hw * 2, 1, i % 6 === 0 ? '#7c1408' : '#b82818');
+  }
+  rect(ctx, x - 36, g - 44, 30, 20, '#4c2408');                  // окно
+  rect(ctx, x - 34, g - 42, 26, 16, '#fce078');
+  if (o.guests) {                                                // Соня и Лапка уже дома!
+    ctx.drawImage(SPR.sonyaHappy, 2, 0, 12, 12, x - 34, g - 38, 12, 12);
+    ctx.drawImage(SPR.catIdle, 14, 0, 9, 9, x - 19, g - 35, 9, 9);
+  } else {
+    rect(ctx, x - 34, g - 35, 26, 2, '#4c2408');                 // перекладина рамы
+  }
+  rect(ctx, x - 22, g - 42, 2, 16, '#4c2408');
+  rect(ctx, x - 38, g - 24, 34, 3, '#6c3810');                   // подоконник
+  rect(ctx, x - 2, g - 31, 20, 31, '#4c2408');                   // дверь
+  if (o.door) {
+    rect(ctx, x, g - 29, 16, 29, '#fcc860');
+    rect(ctx, x, g - 29, 3, 29, '#8c5424');
+  } else {
+    rect(ctx, x, g - 29, 16, 29, '#7c4414');
+    rect(ctx, x + 5, g - 29, 1, 29, '#5c3010');
+    rect(ctx, x + 10, g - 29, 1, 29, '#5c3010');
+    rect(ctx, x + 12, g - 16, 2, 2, '#f8d800');
+  }
+  rect(ctx, x - 5, g - 2, 26, 2, '#9c9c9c');                     // крыльцо
+}
+
+function drawStartBox(o, x) {
+  const dx = o.shake ? (frameCount % 4 < 2 ? -1 : 1) : 0;
+  if (!o.open) {
+    drawSprite(SPR.boxClosed, x + dx, o.y);
+    return;
+  }
+  drawSprite(SPR.boxOpen, x, o.y);
+  if (cat.inBox) {
+    // Голова кошки между стенками коробки, потом снова рисуем переднюю стенку поверх
+    ctx.drawImage(SPR.catIdle, 14, 0, 9, 9, x + 8, o.y + o.peek, 9, 9);
+    ctx.drawImage(SPR.boxOpen, 0, 7, 24, 9, x, o.y + 7, 24, 9);
+  }
+}
+
+function drawObject(o, cx) {
+  const x = Math.round(o.x - cx);
+  if (x < -120 || x > W + 60) return;       // за экраном не рисуем
+  switch (o.type) {
+    case 'fish':
+      drawSprite(SPR.fish, x, o.y + Math.round(Math.sin(frameCount / 12 + o.phase) * 1.5));
+      break;
+    case 'shroom':
+      drawSprite(SPR.mushroom, o.sx - cx, o.sy);
+      break;
+    case 'hog':
+      drawSprite(SPR.hog[Math.floor(o.anim / 10) % 2], x - 1, o.y + o.h - 16, o.dir < 0);
+      break;
+    case 'jumper':
+      if (o.flying) drawSprite(o.vy < 0 ? SPR.fishUp : SPR.fishDown, x, o.y);
+      break;
+    case 'flag':     drawFlag(o, x); break;
+    case 'exit':     drawExitSign(x, o.y); break;
+    case 'house':    drawHouse(o, x); break;
+    case 'girl': {
+      if (o.inside) break;                    // уже зашла в дом
+      // Идёт — переставляет ноги; обрадовалась — подпрыгивает на месте
+      const img = o.walk ? (Math.floor(o.walk / 10) % 2 ? SPR.sonyaStep : SPR.sonyaHappy)
+        : o.happy ? SPR.sonyaHappy : SPR.sonya;
+      const hop = o.happy && !o.walk ? Math.round(Math.abs(Math.sin(frameCount / 5)) * 2) : 0;
+      drawSprite(img, x, o.y - hop);
+      break;
+    }
+    case 'startbox': drawStartBox(o, x); break;
+  }
+}
+
+function drawCat(cx) {
+  if (cat.hidden) return;
+  if (cat.invuln > 0 && Math.floor(cat.invuln / 3) % 2 === 0) return;   // мигает
+  let img;
+  if (cat.dead) img = SPR.catBlink;
+  else if (!cat.onGround && state === 'play') img = cat.vy < 0 ? SPR.catJump : SPR.catFall;
+  else if (cat.anim > 0) img = SPR.catRun[Math.floor(cat.anim) % 4];
+  else img = cat.blink > 0 ? SPR.catBlink : SPR.catIdle;
+  const upsideDown = cat.dead && cat.deathReason !== 'water';
+  drawSprite(img, cat.x + cat.w / 2 - 12 - cx, cat.y + cat.h - 16, cat.facing < 0, upsideDown);
+}
+
+// Облачко с репликой
+function drawBubble(str, x, y) {
+  const w = str.length * 6 + 5, h = 13;
+  const left = Math.round(x - w / 2), top = Math.round(y - h - 4);
+  rect(ctx, left + 1, top, w - 2, h, '#000');
+  rect(ctx, left, top + 1, w, h - 2, '#000');
+  rect(ctx, left + 1, top + 1, w - 2, h - 2, '#fcfcfc');
+  rect(ctx, x - 1, top + h - 1, 3, 2, '#fcfcfc');
+  rect(ctx, x - 2, top + h - 1, 1, 3, '#000');
+  rect(ctx, x + 2, top + h - 1, 1, 2, '#000');
+  rect(ctx, x - 1, top + h + 1, 3, 1, '#000');
+  text(str, left + 3, top + 3, { color: '#000' });
+}
+
+function drawEffects(cx) {
+  for (const p of effects) {
+    const x = Math.round(p.x - cx), y = Math.round(p.y);
+    if (p.img) ctx.drawImage(p.img, x, y);
+    else rect(ctx, x, y, p.size || 1, p.size || 1, p.color);
+  }
+  // Сначала надписи и сердечки, потом облачка с репликами — чтобы их всегда можно было прочитать
+  for (const p of popups) {
+    if (!p.bubble) text(p.text, p.x - cx, p.y, { align: 'center', color: p.color, shadow: '#000' });
+  }
+  for (const p of popups) {
+    if (p.bubble) drawBubble(p.text, Math.round(p.x - cx), p.y);
+  }
+}
+
+function drawWorld() {
+  const cx = Math.round(camX);
+  drawBackground(bg, cx);
+  ctx.drawImage(levelCanvas, cx, 0, W, H, 0, 0, W, H);   // земля и украшения — одним куском
+  drawBoxes(cx);
+  for (const o of objects) drawObject(o, cx);
+  drawCat(cx);
+  drawWater(cx);
+  drawEffects(cx);
+}
+
+// Полоса сверху: рыбки, очки, название уровня, жизни
+function drawHUD() {
+  ctx.drawImage(SPR.fish, 6, 4);
+  text('×' + pad(fishCount, 2), 20, 5, { shadow: '#000' });
+  text(pad(score, 6), 60, 5, { shadow: '#000' });
+  text(level.name, 186, 5, { align: 'center', color: '#fce8a0', shadow: '#000' });
+  text('♥', 276, 5, { color: '#f85878', shadow: '#000' });
+  text('×' + lives, 282, 5, { shadow: '#000' });
+}
+
+// Затемнение ступеньками, как на приставке
+function fadeOut(k) {
+  const a = clamp(Math.floor(k * 5) / 5, 0, 1);
+  if (a <= 0) return;
+  ctx.fillStyle = `rgba(0, 0, 0, ${a})`;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function blinkOn() { return Math.floor(frameCount / 30) % 2 === 0; }
+function confirmKey() { return isTouch ? 'СТАРТ' : 'ENTER'; }
+
+// ---------------------------------------------------------------------
+// 13. ЭКРАНЫ И ХОД ИГРЫ
+//   title → story → intro → play ⇄ pause
+//                             play → dying → play (с флажка) или gameover
+//                             play → clear → intro следующего уровня
+//                             play → home → ending → title
+// ---------------------------------------------------------------------
+let state = 'title';
+let timer = 0;              // сколько кадров длится текущий экран
+let frameCount = 0;
+let levelIndex = 0;
+let score = 0, fishCount = 0, lives = START_LIVES;
+let record = 0;
+try { record = Number(localStorage.getItem('cat-home-record')) || 0; } catch (e) { /* не страшно */ }
+
+function saveRecord() {
+  if (score <= record) return;
+  record = score;
+  try { localStorage.setItem('cat-home-record', String(record)); } catch (e) { /* не страшно */ }
+}
+
+const STORY = ['КОШКА ЛАПКА УСНУЛА В КОРОБКЕ...', 'А ПРОСНУЛАСЬ В ЛЕСУ!', '', 'ДОМА ЕЁ ЖДЁТ СОНЯ.', 'ПОМОГИ ЛАПКЕ НАЙТИ ДОРОГУ ДОМОЙ!'];
+const STORY_LEN = STORY.join('').length;
+
+// Картинки заставки: утренний лес, полоска земли и название игры
+const titleBg = buildBackground(THEMES.morning);
+const titleGround = makeCanvas(512, 40, g => {
+  for (let tx = 0; tx < 32; tx++) {
+    drawGroundTile(g, tx * TILE, 8, tx * 31, { top: true }, THEMES.morning);
+    drawGroundTile(g, tx * TILE, 24, tx * 17 + 5, {}, THEMES.morning);
+  }
+});
+const titleLogo = makeCanvas(222, 30, g => {
+  const s = 'ДОРОГА ДОМОЙ';
+  for (let dx = -2; dx <= 2; dx++) {
+    for (let dy = -2; dy <= 4; dy++) paintText(g, s, 3 + dx, 3 + dy, '#3c1808', 3);   // толстый контур и тень
+  }
+  paintText(g, s, 3, 3, '#f8a830', 3);
+  g.save();                                  // верхняя половина букв светлее — «металлический» блеск
+  g.beginPath();
+  g.rect(0, 0, 222, 3 + 9);
+  g.clip();
+  paintText(g, s, 3, 3, '#fce8a0', 3);
+  g.restore();
+});
+
+function newGame() {
+  score = 0;
+  fishCount = 0;
+  lives = START_LIVES;
+  state = 'story';
+  timer = 0;
+}
+
+function startLevel(i) {
+  levelIndex = i;
+  loadLevel(i);
+  state = 'intro';
+  timer = 0;
+  stopMusic();
+}
+
+function beginPlay() {
+  state = 'play';
+  timer = 0;
+  if (!cat.inBox) playMusic(level.music);   // на первом уровне музыка начнётся, когда кошка вылезет
+}
+
+function updatePlay() {
+  if (pressed.pause || pressed.start) {
+    pauseGame();
+    return;
+  }
+  if (cat.inBox) updateStartBox(objects.find(o => o.type === 'startbox'));
+  else updateCat();
+  if (state !== 'play') return;
+  updateObjects();
+  updateCamera();
+}
+
+function pauseGame() {
+  state = 'pause';
+  sfx.pause();
+  pauseMusic(true);
+}
+function resumeGame() {
+  state = 'play';
+  pauseMusic(false);
+}
+function autoPause() { if (state === 'play') pauseGame(); }
+
+// Дошли до указателя «ДОМОЙ»
+function levelClear() {
+  state = 'clear';
+  timer = 0;
+  score += 1000;
+  popup(cat.x + cat.w / 2, cat.y - 14, '+1000', '#fce060');
+  stopMusic();
+  playJingle('clear');
+}
+function updateClear() {
+  cat.facing = 1;
+  cat.onGround = true;
+  cat.x += 1.5;                             // кошка сама убегает вправо
+  cat.anim += 0.2;
+  updateCamera();
+  if (timer > 150) startLevel(levelIndex + 1);
+}
+
+// Добежали до дома, а там ждёт Соня
+function reachHome() {
+  const house = objects.find(o => o.type === 'house');
+  const girl = objects.find(o => o.type === 'girl');
+  state = 'home';
+  timer = 0;
+  score += 5000;
+  popup(house.x + 8, house.y - 50, '+5000', '#fce060');
+  cat.vx = 0;
+  cat.anim = 0;
+  cat.facing = 1;
+  if (girl) {
+    girl.happy = true;
+    popups = popups.filter(p => !p.bubble);          // убираем «КИС-КИС!»
+    bubble(girl.x + 8, girl.y - 2, 'ЛАПКА! ТЫ ВЕРНУЛАСЬ!', 110);
+  }
+  stopMusic();
+  playJingle('home');
+}
+
+function heart(x, y) {
+  popups.push({ x: x + Math.random() * 10 - 5, y, text: '♥', color: '#f85878', t: 55 });
+}
+
+// Финал: Соня радуется, потом обе заходят в дом и выглядывают из окошка
+function updateHome() {
+  const house = objects.find(o => o.type === 'house');
+  const girl = objects.find(o => o.type === 'girl');
+  const door = house.x + 8;                          // середина двери
+  houseSmoke(house);
+  if (timer === 30) sfx.meow();
+  if (girl && timer < 120 && timer % 12 === 0) heart((girl.x + 8 + cat.x + cat.w / 2) / 2, GROUND_Y - 24);
+  if (girl && timer === 125) bubble(girl.x + 8, girl.y - 2, 'ПОШЛИ ДОМОЙ!', 70);
+  if (timer === 170) {
+    house.door = 1;                                  // дверь открывается
+    sfx.pop();
+  }
+  if (girl && timer > 180 && !girl.inside) {         // первой заходит Соня...
+    girl.x += 0.6;
+    girl.walk++;
+    if (girl.x + 8 >= door) girl.inside = true;
+  }
+  if (timer > 200 && !cat.hidden) {                  // ...за ней Лапка
+    cat.onGround = true;
+    cat.x += 0.7;
+    cat.anim += 0.12;
+    if (cat.x + cat.w / 2 >= door) cat.hidden = true;
+  }
+  if (cat.hidden && (!girl || girl.inside) && !house.guests) {
+    house.door = 0;
+    house.guests = true;                             // и обе появляются в окошке
+    house.guestsTime = timer;
+    sfx.meow();
+  }
+  if (house.guests && timer % 16 === 0) heart(house.x - 20, house.y + TILE - 50);
+  if (house.guests && timer - house.guestsTime > 150) {
+    state = 'ending';
+    timer = 0;
+    saveRecord();
+    playMusic('home');
+  }
+}
+
+// После «ИГРА ОКОНЧЕНА» — снова с начала того же уровня
+function continueGame() {
+  score = 0;
+  fishCount = 0;
+  lives = START_LIVES;
+  startLevel(levelIndex);
+}
+
+function update() {
+  frameCount++;
+  timer++;
+  const confirm = pressed.start || pressed.jump;
+  switch (state) {
+    case 'title':
+      if (actx && !music.name) playMusic('home');   // после первого нажатия заиграет музыка
+      if (confirm) newGame();
+      break;
+    case 'story': {
+      const shown = Math.floor(timer / 3);
+      if (shown <= STORY_LEN && timer % 6 === 0) sfx.blip();
+      if (confirm) {
+        if (shown < STORY_LEN) timer = STORY_LEN * 3;   // сразу показать весь текст
+        else startLevel(0);
+      }
+      break;
+    }
+    case 'intro':
+      if (timer > 150 || (timer > 30 && confirm)) beginPlay();
+      break;
+    case 'play':     updatePlay(); break;
+    case 'pause':    if (pressed.pause || pressed.start) resumeGame(); break;
+    case 'dying':    updateDying(); break;
+    case 'clear':    updateClear(); break;
+    case 'home':     updateHome(); break;
+    case 'gameover': if (timer > 60 && confirm) continueGame(); break;
+    case 'ending':
+      houseSmoke(objects.find(o => o.type === 'house'));
+      if (timer > 90 && confirm) {
+        state = 'title';
+        timer = 0;
+      }
+      break;
+  }
+  if (state !== 'pause') updateEffects();
+  if (toast.t > 0) toast.t--;
+  updateMusic();
+  for (const k in pressed) pressed[k] = false;
+}
+
+// ---- Экраны ----
+function drawTitle() {
+  const scroll = frameCount * 0.6;         // фон едет — кажется, что кошка бежит по лесу
+  drawBackground(titleBg, scroll);
+  drawLayer(titleGround, scroll, GROUND_Y - 8);
+  drawSprite(SPR.catRun[Math.floor(frameCount / 6) % 4], 138, GROUND_Y - 16);
+  ctx.drawImage(titleLogo, Math.floor((W - titleLogo.width) / 2), 24);
+  text('8-БИТНОЕ ПРИКЛЮЧЕНИЕ КОШКИ ЛАПКИ', W / 2, 60, { align: 'center', shadow: '#000' });
+  if (blinkOn()) text('НАЖМИ ' + confirmKey(), W / 2, 92, { align: 'center', color: '#fce060', shadow: '#000' });
+  text('РЕКОРД ' + pad(record, 6), W / 2, 110, { align: 'center', shadow: '#000' });
+  if (!isTouch) text('← → БЕГ   ↑ ПРЫЖОК   M ЗВУК', W / 2, 146, { align: 'center', shadow: '#000' });
+}
+
+function drawStory() {
+  rect(ctx, 0, 0, W, H, '#000');
+  drawSprite(SPR.boxClosed, W / 2 - 12, 34);
+  for (let i = 0; i < 3; i++) {            // «Z-z-z» над коробкой
+    const k = (frameCount / 40 + i / 3) % 1;
+    text('Z', W / 2 + 8 + k * 14, 36 - k * 18, { color: k < 0.8 ? '#8c8cfc' : '#3c3c8c' });
+  }
+  let left = Math.floor(timer / 3);
+  STORY.forEach((line, i) => {
+    const part = line.slice(0, Math.max(0, left));
+    left -= line.length;
+    text(part, W / 2 - (line.length * 6 - 1) / 2, 72 + i * 13);
+  });
+  if (Math.floor(timer / 3) >= STORY_LEN && blinkOn()) {
+    text(confirmKey() + ' - ДАЛЬШЕ', W / 2, 166, { align: 'center', color: '#fce060' });
+  }
+}
+
+function drawIntro() {
+  rect(ctx, 0, 0, W, H, '#000');
+  text('УРОВЕНЬ ' + (levelIndex + 1), W / 2, 58, { align: 'center', color: '#bcbcbc' });
+  text(level.name, W / 2, 74, { align: 'center', scale: 2, color: '#fcc048' });
+  ctx.drawImage(SPR.catIdle, W / 2 - 30, 112);
+  text('× ' + lives, W / 2 + 2, 120);
+}
+
+function drawGameOver() {
+  rect(ctx, 0, 0, W, H, '#000');
+  text('ИГРА ОКОНЧЕНА', W / 2, 64, { align: 'center', scale: 2, color: '#f83828' });
+  text('ОЧКИ   ' + pad(score, 6), W / 2, 100, { align: 'center' });
+  text('РЕКОРД ' + pad(record, 6), W / 2, 114, { align: 'center', color: '#bcbcbc' });
+  if (timer > 60 && blinkOn()) text(confirmKey() + ' - ЕЩЁ РАЗ', W / 2, 150, { align: 'center', color: '#fce060' });
+}
+
+function drawPause() {
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+  ctx.fillRect(0, 0, W, H);
+  text('ПАУЗА', W / 2, 80, { align: 'center', scale: 2, shadow: '#000' });
+  text(isTouch ? 'СТАРТ - ИГРАТЬ ДАЛЬШЕ' : 'P - ИГРАТЬ ДАЛЬШЕ', W / 2, 108, { align: 'center', color: '#fce060', shadow: '#000' });
+}
+
+function drawEnding() {
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+  ctx.fillRect(0, 0, W, H);
+  text('ЛАПКА ДОМА!', W / 2, 26, { align: 'center', scale: 3, color: '#fcc048', shadow: '#3c1808' });
+  text('СОНЯ И ЛАПКА СНОВА ВМЕСТЕ!', W / 2, 60, { align: 'center', color: '#f8a8c8', shadow: '#000' });
+  text('СПАСИБО ЗА ИГРУ!', W / 2, 74, { align: 'center', shadow: '#000' });
+  text('РЫБОК  ' + pad(fishCount, 3), W / 2, 98, { align: 'center', shadow: '#000' });
+  text('ОЧКИ   ' + pad(score, 6), W / 2, 112, { align: 'center', shadow: '#000' });
+  text('РЕКОРД ' + pad(record, 6), W / 2, 126, { align: 'center', color: '#bcbcbc', shadow: '#000' });
+  if (timer > 90 && blinkOn()) text(confirmKey() + ' - ИГРАТЬ СНОВА', W / 2, 156, { align: 'center', color: '#fce060', shadow: '#000' });
+}
+
+function draw() {
+  switch (state) {
+    case 'title':    drawTitle(); break;
+    case 'story':    drawStory(); break;
+    case 'intro':    drawIntro(); break;
+    case 'gameover': drawGameOver(); break;
+    default:
+      drawWorld();
+      if (state !== 'ending') drawHUD();
+      if (state === 'pause') drawPause();
+      if (state === 'dying') fadeOut((timer - 90) / 30);
+      if (state === 'clear') fadeOut((timer - 110) / 40);
+      if (state === 'ending') drawEnding();
+  }
+  if (toast.t > 0) text(toast.text, W / 2, H - 14, { align: 'center', color: '#fce060', shadow: '#000' });
+}
+
+
+// ---------------------------------------------------------------------
+// 14. ГЛАВНЫЙ ЦИКЛ
+// Логика всегда считается 60 раз в секунду, даже на мониторе 120 или 144 Гц, —
+// иначе на быстром мониторе кошка бегала бы вдвое быстрее
+// ---------------------------------------------------------------------
+const STEP = 1000 / 60;
+let lastTime = performance.now(), acc = 0;
+
+function loop(now) {
+  acc += Math.min(now - lastTime, 250);    // после сворачивания вкладки не пытаемся «догнать» время
+  lastTime = now;
+  while (acc >= STEP) {
+    update();
+    acc -= STEP;
+  }
+  draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
