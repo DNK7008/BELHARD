@@ -10,6 +10,8 @@
   <!-- Пустая иконка: браузер не запрашивает favicon.ico и не пишет 404 в консоль -->
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="styles.css">
+  <!-- defer: скрипт выполнится, когда разметка уже готова -->
+  <script src="script.js" defer></script>
 </head>
 <body id="top">
   <header class="site-header">
@@ -98,7 +100,56 @@
       </div>
     </section>
 
-    <!-- Задача 4: FAQ и форма -->
+    <section id="faq" class="section">
+      <div class="container">
+        <h2 class="section-title">Частые вопросы</h2>
+        <!-- <details> раскрывается по клику сам, без JavaScript -->
+        <div class="faq">
+          <details class="faq__item">
+            <summary>Мне нужно что-то устанавливать?</summary>
+            <p>Нет. Всё настраивается на сервере, от вас нужен только код и ответы на пару вопросов.</p>
+          </details>
+          <details class="faq__item">
+            <summary>А если код не работает?</summary>
+            <p>Это видно на этапе оценки. Я скажу, что именно не так и что нужно поправить, — и можно ли сделать это вместе с запуском.</p>
+          </details>
+          <details class="faq__item">
+            <summary>Сколько это стоит?</summary>
+            <p>Зависит от проекта: простой бот и сервис с базой данных — разная работа. Поэтому сначала бесплатная оценка, и цену вы узнаёте до начала работы.</p>
+          </details>
+          <details class="faq__item">
+            <summary>Что будет после запуска?</summary>
+            <p>Мониторинг включён: если сайт упадёт, я узнаю первым. Постоянную поддержку — обновления и доработки — можно подключить отдельно.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section id="form" class="section section--soft">
+      <div class="container">
+        <h2 class="section-title">Бесплатная оценка проекта</h2>
+        <p class="section-intro">Расскажите коротко о проекте — я отвечу, сколько займёт запуск и сколько он стоит.</p>
+        <!-- [ВАШ_ID] — заглушка: без настоящего ID из Formspree отправка всегда заканчивается ошибкой -->
+        <form id="lead-form" class="lead-form" action="https://formspree.io/f/[ВАШ_ID]" method="POST">
+          <div class="field">
+            <label for="name">Как вас зовут</label>
+            <input id="name" name="name" type="text" required maxlength="80" autocomplete="name">
+          </div>
+          <div class="field">
+            <label for="contact">Telegram или email</label>
+            <input id="contact" name="contact" type="text" required maxlength="120" placeholder="@username или you@example.com">
+          </div>
+          <div class="field">
+            <label for="project">Что за проект</label>
+            <textarea id="project" name="project" rows="5" required maxlength="2000" placeholder="Например: Telegram-бот для записи клиентов, код написал ChatGPT"></textarea>
+          </div>
+          <button class="btn" type="submit">Получить оценку</button>
+          <p class="form-note">Отвечу в течение дня.</p>
+          <!-- Сюда script.js пишет результат отправки; aria-live зачитывает его скринридером -->
+          <p id="form-status" class="form-status" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>
   </main>
 
   <footer class="site-footer">
