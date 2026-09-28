@@ -173,6 +173,39 @@ a:hover {
 }
 
 /* ===== 2. Первый экран ===== */
+.hero {
+  padding: 4rem 0 3rem;
+}
+
+.hero__title {
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  /* Строки заголовка примерно одной длины — без одинокого слова в конце */
+  text-wrap: balance;
+}
+
+/* Вторая фраза заголовка — с новой строки и акцентным цветом */
+.hero__accent {
+  display: block;
+  color: var(--color-accent);
+}
+
+.hero__lead {
+  max-width: 36rem;
+  color: var(--color-muted);
+  font-size: 1.25rem;
+}
+
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.5rem;
+  margin-top: 2rem;
+}
+
+.hero__link {
+  font-weight: 600;
+}
 
 /* ===== 3. Проблема и решение ===== */
 
