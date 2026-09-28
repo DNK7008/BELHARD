@@ -1047,7 +1047,7 @@ async () => {
           </div>
           <div class="field">
             <label for="contact">Telegram или email</label>
-            <input id="contact" name="contact" type="text" required maxlength="120" placeholder="@username или you@example.com">
+            <input id="contact" name="contact" type="text" required maxlength="120" placeholder="@username или email">
           </div>
           <div class="field">
             <label for="project">Что за проект</label>
@@ -1262,7 +1262,7 @@ form.addEventListener("submit", async (event) => {
   "method": "POST",
   "fields": [
     {"tag": "input", "type": "text", "id": "name", "required": true, "maxLength": 80, "label": "Как вас зовут", "placeholder": ""},
-    {"tag": "input", "type": "text", "id": "contact", "required": true, "maxLength": 120, "label": "Telegram или email", "placeholder": "@username или you@example.com"},
+    {"tag": "input", "type": "text", "id": "contact", "required": true, "maxLength": 120, "label": "Telegram или email", "placeholder": "@username или email"},
     {"tag": "textarea", "type": "textarea", "id": "project", "required": true, "maxLength": 2000, "label": "Что за проект", "placeholder": "Например: Telegram-бот для записи клиентов, код написал ChatGPT"}
   ],
   "autocompleteName": "name",

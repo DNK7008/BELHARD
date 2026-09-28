@@ -24,10 +24,10 @@ start homework-4\index.html
 
 Локальный сервер нужен, если проверяешь Open Graph или JSON-LD внешними валидаторами (им требуется настоящий URL) — по `file://` разметка страницы работает полностью.
 
-Второй случай, когда без сервера не обойтись, — проверка через Playwright MCP: он не открывает `file://` («Access to "file:" protocol is blocked»). Для него раздай корень репозитория локальным сервером — этот вариант отдаёт файлы с `Cache-Control: no-store`, чтобы браузер после правки не показывал старый CSS. Страницы тогда открываются по `http://127.0.0.1:8765/<папка>/`.
+Второй случай, когда без сервера не обойтись, — проверка через Playwright MCP: он не открывает `file://` («Access to "file:" protocol is blocked»). Для него раздай корень репозитория локальным сервером — этот вариант отдаёт файлы с `Cache-Control: no-store`, чтобы браузер после правки не показывал старый CSS. Страницы тогда открываются по `http://127.0.0.1:8765/<папка>/`. Запускай команду из корня репозитория и в фоне: сервер работает, пока его не остановишь.
 
 ```
-python -c "import http.server as s, functools as f; H = type('H', (s.SimpleHTTPRequestHandler,), {'end_headers': lambda self: (self.send_header('Cache-Control', 'no-store'), s.SimpleHTTPRequestHandler.end_headers(self))}); s.ThreadingHTTPServer(('127.0.0.1', 8765), f.partial(H, directory='E:/Domains/BELHARD')).serve_forever()"
+python -c "import http.server as s, functools as f; H = type('H', (s.SimpleHTTPRequestHandler,), {'end_headers': lambda self: (self.send_header('Cache-Control', 'no-store'), s.SimpleHTTPRequestHandler.end_headers(self))}); s.ThreadingHTTPServer(('127.0.0.1', 8765), f.partial(H, directory='.')).serve_forever()"
 ```
 
 Корневой `index.html` — оглавление для GitHub Pages (`https://dnk7008.github.io/BELHARD/`). Появилась новая работа со страницей — добавь на неё ссылку туда.
@@ -92,7 +92,7 @@ python -c "import http.server as s, functools as f; H = type('H', (s.SimpleHTTPR
 
 **Стили разбиты на четыре подписанных блока:** `/* ===== 1. Токены и база ===== */`, `2. Первый экран`, `3. Проблема и решение`, `4. FAQ и форма`. Блоки 2–4 стилизуют только свои секции. Все цвета — переменные на `:root`: нужен новый цвет — сначала заведи переменную.
 
-**Форма отправляется на заглушку.** В `action` стоит `https://formspree.io/f/[ВАШ_ID]`, поэтому отправка всегда заканчивается сообщением «Не получилось отправить…», а в консоли появляется сетевая ошибка. Это не баг: нужен настоящий ID из кабинета Formspree. Контакты `@USERNAME` и `you@example.com` — тоже заглушки, страница закрыта `robots=noindex`. `@USERNAME` встречается и в подвале, и в тексте ошибки в `script.js` — меняешь контакт, правь оба места.
+**Форма отправляется на заглушку.** В `action` стоит `https://formspree.io/f/[ВАШ_ID]`, поэтому отправка всегда заканчивается сообщением «Не получилось отправить…», а в консоли появляется сетевая ошибка. Это не баг: нужен настоящий ID из кабинета Formspree. Контакты `@USERNAME` и `you@example.com` — тоже заглушки, страница закрыта `robots=noindex`. `@USERNAME` встречается и в подвале, и в тексте ошибки в `script.js` — меняешь контакт, правь оба места. Когда заменишь все заглушки, убери `robots=noindex` и поправь примечание про заглушки в корневом `index.html`.
 
 **Поле из одних пробелов** встроенная проверка `required` пропускает — его ловит `script.js` и пишет «Заполните все поля.».
 

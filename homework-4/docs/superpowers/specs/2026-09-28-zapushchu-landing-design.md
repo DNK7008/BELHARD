@@ -177,7 +177,7 @@ homework-4/
 | Поле | `name` | Тип | `label` | Ограничения | `placeholder` |
 |---|---|---|---|---|---|
 | Имя | `name` | `input type="text"` | Как вас зовут | `required`, `maxlength="80"`, `autocomplete="name"` | — |
-| Контакт | `contact` | `input type="text"` | Telegram или email | `required`, `maxlength="120"` | `@username или you@example.com` |
+| Контакт | `contact` | `input type="text"` | Telegram или email | `required`, `maxlength="120"` | `@username или email` |
 | Проект | `project` | `textarea rows="5"` | Что за проект | `required`, `maxlength="2000"` | `Например: Telegram-бот для записи клиентов, код написал ChatGPT` |
 
 - У каждого поля `id` совпадает с `name`, `label` связан через `for`.

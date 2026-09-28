@@ -25,7 +25,7 @@ function showStatus(text, kind) {
 // required пропускает поле из одних пробелов, поэтому проверяем сами
 function hasBlankField() {
   return [...form.elements]
-    .filter((field) => field.name)
+    .filter((field) => field.required)
     .some((field) => field.value.trim() === "");
 }
 
