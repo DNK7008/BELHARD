@@ -13,6 +13,15 @@ const MESSAGES = {
   error: "Не получилось отправить. Напишите напрямую в Telegram: @USERNAME",
 };
 
+// Демо-страницы (например, diagnostic/) передают результат в адресе: index.html?project=…#form.
+// Подставляем его в поле «Что за проект», чтобы человеку не пришлось писать заново.
+// Текст пишется в value, а не в разметку, поэтому чужая ссылка ничего не внедрит в страницу.
+const projectFromDemo = new URLSearchParams(window.location.search).get("project");
+if (projectFromDemo) {
+  const projectField = form.elements.project;
+  projectField.value = projectFromDemo.slice(0, projectField.maxLength);
+}
+
 // Показывает сообщение под формой. kind — "is-success", "is-error" или "" (без цвета).
 function showStatus(text, kind) {
   formStatus.textContent = text;
