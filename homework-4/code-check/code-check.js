@@ -439,3 +439,185 @@ async function readFiles(fileList) {
   }
   return { sources, skipped };
 }
+
+// ===== 4. Страница =====
+const MAX_PLACES_SHOWN = 10;
+
+const MESSAGES = {
+  empty: "Вставьте код или выберите файлы.",
+  allSkipped: "Нечего проверять: все выбранные файлы пропущены — не текстовые или больше 1 МБ.",
+};
+
+const checker = document.getElementById("checker");
+const codeField = document.getElementById("code");
+const filesField = document.getElementById("files");
+const statusLine = document.getElementById("check-status");
+const reportSection = document.getElementById("report");
+const reportTitle = document.getElementById("report-title");
+const reportSummary = document.getElementById("report-summary");
+const reportBody = document.getElementById("report-body");
+const rulesList = document.getElementById("rules-list");
+const sendLink = document.getElementById("send-report");
+const clearButton = document.getElementById("clear");
+const checkAnotherButton = document.getElementById("check-another");
+
+// Создаёт элемент. Текст — через textContent, чтобы он никогда не превратился в разметку.
+function createNode(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) {
+    node.className = className;
+  }
+  if (text) {
+    node.textContent = text;
+  }
+  return node;
+}
+
+// Список «Что я проверял» — из тех же таблиц, по которым идёт проверка
+function renderRulesList() {
+  rulesList.append(createNode("li", "", "Тип проекта — по импортам и разметке: aiogram, flask, express, <html> и другие"));
+  for (const rule of [...PROBLEM_RULES, ...NEED_RULES]) {
+    const item = createNode("li");
+    item.append(createNode("strong", "", rule.title), ` — ищу ${rule.looksFor}`);
+    rulesList.append(item);
+  }
+  rulesList.append(createNode("li", "", "Файл .env — правила про ключи в нём не срабатывают"));
+}
+
+// Блок отчёта с заголовком
+function createBlock(title) {
+  const block = createNode("div", "report__block");
+  block.append(createNode("h3", "", title));
+  return block;
+}
+
+// Карточки: заголовок и текст, у проблем — ещё список мест
+function createCards(items, fillCard) {
+  const list = createNode("ul", "cards");
+  for (const item of items) {
+    const card = createNode("li", "card");
+    card.append(createNode("h4", "", item.title), createNode("p", "", item.text));
+    fillCard(card, item);
+    list.append(card);
+  }
+  return list;
+}
+
+function renderReport(report) {
+  reportSummary.textContent = `${summaryText(report)}.`;
+  reportBody.replaceChildren();
+
+  const typeBlock = createBlock("Что это за проект");
+  typeBlock.append(createNode("p", "report__type", report.type.label));
+
+  const problemsBlock = createBlock("Что мешает запуску");
+  if (report.problems.length === 0) {
+    problemsBlock.append(createNode("p", "report__ok", "Явных проблем не нашёл. Это не значит, что их нет: проверка ищет только типовые ошибки из списка ниже."));
+  } else {
+    problemsBlock.append(createCards(report.problems, (card, problem) => {
+      const placesList = createNode("ul", "places");
+      for (const place of problem.places.slice(0, MAX_PLACES_SHOWN)) {
+        const item = createNode("li");
+        // Пробел между подписью и кодом не виден (подпись — отдельной строкой), но без него
+        // скринридер и копирование склеят «строка 8» с кодом
+        item.append(
+          createNode("span", "place__label", placeLabel(place, report.multipleSources)),
+          " ",
+          createNode("code", "", place.snippet)
+        );
+        placesList.append(item);
+      }
+      const rest = problem.places.length - MAX_PLACES_SHOWN;
+      if (rest > 0) {
+        placesList.append(createNode("li", "", `…и ещё ${rest}`));
+      }
+      card.append(placesList);
+    }));
+  }
+
+  const needsBlock = createBlock("Что понадобится");
+  if (report.needs.length === 0) {
+    needsBlock.append(createNode("p", "", "По этому коду не понять, что понадобится для запуска, — скажу после оценки."));
+  } else {
+    needsBlock.append(createCards(report.needs, () => {}));
+  }
+
+  reportBody.append(typeBlock, problemsBlock, needsBlock);
+
+  if (report.skipped.length > 0) {
+    const skippedBlock = createBlock("Пропущенные файлы");
+    const list = createNode("ul", "skipped");
+    for (const file of report.skipped) {
+      list.append(createNode("li", "", `${file.name} — ${file.reason}`));
+    }
+    skippedBlock.append(list);
+    reportBody.append(skippedBlock);
+  }
+
+  // Отчёт уходит в форму лендинга через адрес ссылки — без кода и без ключей
+  sendLink.href = `../index.html?project=${encodeURIComponent(reportToText(report))}#form`;
+}
+
+function showStatus(text) {
+  statusLine.textContent = text;
+}
+
+// Проверка: собрать источники, прочитать файлы, посчитать и показать отчёт
+async function runCheck() {
+  showStatus("");
+  const sources = [];
+  if (codeField.value.trim() !== "") {
+    sources.push({ name: PASTED_NAME, text: codeField.value });
+  }
+  const files = await readFiles(filesField.files);
+  sources.push(...files.sources);
+
+  if (sources.length === 0) {
+    reportSection.hidden = true;
+    showStatus(files.skipped.length > 0 ? MESSAGES.allSkipped : MESSAGES.empty);
+    return;
+  }
+
+  renderReport(analyze(sources, files.skipped));
+  reportSection.hidden = false;
+  // Сам focus() не прокручивает страницу, если заголовок виден краешком внизу (урок демо 1),
+  // поэтому фокус ставим без прокрутки, а к отчёту прокручиваем явно
+  reportTitle.focus({ preventScroll: true });
+  reportTitle.scrollIntoView({ block: "start" });
+}
+
+// Код изменился — старый отчёт больше не про этот код: прячем, чтобы его нельзя было отправить
+function forgetReport() {
+  if (!reportSection.hidden) {
+    reportSection.hidden = true;
+    showStatus("");
+  }
+}
+
+function clearAll() {
+  checker.reset(); // стирает и поле кода, и выбранные файлы
+  reportSection.hidden = true;
+  showStatus("");
+  codeField.focus();
+}
+
+checker.addEventListener("submit", (event) => {
+  event.preventDefault();
+  runCheck();
+});
+
+// Пример: подставляем код, сбрасываем выбранные файлы и сразу проверяем
+for (const button of document.querySelectorAll("[data-example]")) {
+  button.addEventListener("click", () => {
+    codeField.value = EXAMPLES[button.dataset.example];
+    filesField.value = "";
+    runCheck();
+  });
+}
+
+codeField.addEventListener("input", forgetReport);
+filesField.addEventListener("change", forgetReport);
+clearButton.addEventListener("click", clearAll);
+checkAnotherButton.addEventListener("click", clearAll);
+
+renderRulesList();
