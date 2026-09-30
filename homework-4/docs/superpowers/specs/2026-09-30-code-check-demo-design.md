@@ -4,6 +4,8 @@
 > Правки после финального ревью (2026-09-30): шаблоны `telegram-token`, `url-password`,
 > `secret-assignment`, `sql-concat`, `python-script`, `js-code`; короткие имена файлов и
 > ограничение длины адреса в тексте для формы (6.4); шрифт поля кода 16 px (10); новые случаи в 12.
+> Затем — отдельное правило `anthropic-key`: ключи `sk-ant-…` подписываются «Ключ Anthropic
+> (Claude)», а не «Ключ OpenAI» (5.2, 12). Правил «мешает запуску» стало 9.
 >
 > Источник: [demo.md](../../../demo.md), вариант 2. Устройство повторяет демо 1 —
 > [2026-09-30-diagnostic-demo-design.md](2026-09-30-diagnostic-demo-design.md): своя папка, стили из
@@ -254,7 +256,17 @@ const PROBLEM_RULES = [
     title: "Ключ OpenAI в коде",
     looksFor: "строку, которая начинается с sk- — так выглядит ключ OpenAI",
     text: "По этому ключу с вашего счёта в OpenAI могут тратить деньги. Попавший в код ключ отзывают и выпускают новый.",
-    pattern: /\bsk-[A-Za-z0-9_-]{20,}/,
+    // (?!ant-) — ключи Anthropic тоже начинаются с sk-, для них своё правило ниже
+    pattern: /\bsk-(?!ant-)[A-Za-z0-9_-]{20,}/,
+    secret: true,
+    mask: (match) => hide(match),
+  },
+  {
+    id: "anthropic-key",
+    title: "Ключ Anthropic (Claude) в коде",
+    looksFor: "строку, которая начинается с sk-ant- — так выглядит ключ Anthropic",
+    text: "По этому ключу с вашего счёта в Anthropic могут тратить деньги на запросы к Claude. Попавший в код ключ отзывают в консоли Anthropic и выпускают новый.",
+    pattern: /\bsk-ant-[A-Za-z0-9_-]{20,}/,
     secret: true,
     mask: (match) => hide(match),
   },
@@ -726,7 +738,8 @@ const MAX_FILE_SIZE = 1024 * 1024; // 1 МБ
    | Правило | Срабатывает | Не срабатывает |
    |---|---|---|
    | telegram-token | `BOT_TOKEN = "123456789:AAFakeTokenForDemoOnly-0123456789ab"` | `id = "123456789:short"` |
-   | openai-key | `key = "sk-demoFakeKey0123456789abcdefXYZ"` | `name = "task-0123456789abcdefghijk"` |
+   | openai-key | `key = "sk-demoFakeKey0123456789abcdefXYZ"` | `name = "task-0123456789abcdefghijk"`, ключ Anthropic `sk-ant-…` |
+   | anthropic-key | `ANTHROPIC_API_KEY = "sk-ant-api03-demoFakeKey0123456789abcdef"` → `ANTHROPIC_API_KEY = "sk-…"` | `name = "sk-ant-short"`, ключ OpenAI |
    | url-password | `DATABASE_URL = "postgres://admin:S3cretPass@db.example.com/shop"` | `url = "http://localhost:5000/api"` |
    | secret-assignment | `DB_PASSWORD = "qwerty123"`, `"api_key": "abcdef123456"` | `TOKEN = os.getenv("TOKEN")`, `password = ""`, `BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"`, `token_url = "https://example.com/token"` |
    | debug-mode | `app.run(debug=True)`, `DEBUG = True` | `debugger = True` |
