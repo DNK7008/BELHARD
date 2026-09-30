@@ -1,0 +1,204 @@
+/* Стили демо «Проверка кода». Цвета, кнопки и карточки — из ../styles.css. */
+
+/* ===== 1. Форма проверки ===== */
+.checker {
+  display: grid;
+  gap: 1.25rem;
+  max-width: 48rem;
+  margin-top: 2rem;
+}
+
+.checker__field {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.checker__field label {
+  font-weight: 600;
+}
+
+/* Код читают моноширинным шрифтом: так видны отступы, а в Python они важны */
+.checker textarea {
+  width: 100%;
+  padding: 0.75rem 0.875rem;
+  /* Рамка цветом --color-muted: граница поля должна отличаться от фона хотя бы в 3 раза */
+  border: 1px solid var(--color-muted);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  /* Не меньше 16px: иначе iPhone увеличивает страницу, когда человек нажимает на поле */
+  font-size: 1rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+/* Поле выбора файлов на узком экране не должно распирать страницу */
+.checker input[type="file"] {
+  max-width: 100%;
+}
+
+.checker__hint {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.9375rem;
+}
+
+.checker__examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.checker__examples-title {
+  width: 100%;
+  margin: 0;
+}
+
+.example-button {
+  min-height: 44px; /* удобно попасть пальцем */
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.example-button:hover {
+  background: var(--color-accent-soft);
+}
+
+.checker__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.5rem;
+}
+
+/* Кнопка, которая выглядит как ссылка: второстепенное действие рядом с главным */
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  color: var(--color-accent-hover);
+}
+
+.checker__status {
+  margin: 0;
+  color: var(--color-error);
+  font-weight: 600;
+}
+
+/* ===== 2. Отчёт ===== */
+/* У #report не задаём display: иначе атрибут hidden перестанет его прятать */
+.report__summary {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.report__block {
+  margin-top: 2rem;
+}
+
+.report__block h3 {
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+}
+
+/* Сетка карточек из styles.css отступает сверху на 2rem — под заголовком блока это лишнее */
+.report__block .cards {
+  margin-top: 0;
+}
+
+/* Заголовок карточки — как заголовок карточки на лендинге (.card h3) */
+.card h4 {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.report__type {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.report__ok {
+  margin: 0;
+}
+
+.places {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.place__label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+/* Строка кода переносится, а не уезжает вбок: иначе на телефоне появится горизонтальная прокрутка */
+.places code {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.875rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.skipped {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.report__rules {
+  margin-top: 2rem;
+}
+
+.report__rules summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.report__rules ul {
+  margin: 1rem 0 0;
+  padding-left: 1.25rem;
+  color: var(--color-muted);
+}
+
+.report__rules li + li {
+  margin-top: 0.5rem;
+}
+
+.report__note {
+  margin: 2rem 0 0;
+  color: var(--color-muted);
+}
+
+.report__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.5rem;
+  margin-top: 1.5rem;
+}
