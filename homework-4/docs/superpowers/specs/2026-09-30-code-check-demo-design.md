@@ -1,6 +1,10 @@
 # Демо «Проверка кода» — спецификация
 
 > Дата: 2026-09-30. Путь brainstorming: Architectural (новая страница).
+> Правки после финального ревью (2026-09-30): шаблоны `telegram-token`, `url-password`,
+> `secret-assignment`, `sql-concat`, `python-script`, `js-code`; короткие имена файлов и
+> ограничение длины адреса в тексте для формы (6.4); шрифт поля кода 16 px (10); новые случаи в 12.
+>
 > Источник: [demo.md](../../../demo.md), вариант 2. Устройство повторяет демо 1 —
 > [2026-09-30-diagnostic-demo-design.md](2026-09-30-diagnostic-demo-design.md): своя папка, стили из
 > `../styles.css`, результат уходит в форму лендинга через `?project=`.
@@ -201,14 +205,15 @@ const PROJECT_TYPES = [
   {
     id: "python-script",
     label: "Скрипт на Python",
-    pattern: /^\s*(?:import\s+\w+|from\s+[\w.]+\s+import\b|def\s+\w+\s*\()/m,
+    // «import X» без «from "…"» дальше по строке: import React from "react" — это JavaScript
+    pattern: /^\s*(?:import\s+\w+(?!.*\bfrom\s*["'])|from\s+[\w.]+\s+import\b|def\s+\w+\s*\()/m,
     server: true,
     web: false,
   },
   {
     id: "js-code",
     label: "Код на JavaScript",
-    pattern: /\bfunction\s+\w+\s*\(|\b(?:const|let)\s+\w+\s*=|=>/,
+    pattern: /\bfunction\s+\w+\s*\(|\b(?:const|let)\s+\w+\s*=|=>|^\s*import\s.*\bfrom\s*["']/m,
     server: false,
     web: false,
   },
@@ -239,9 +244,10 @@ const PROBLEM_RULES = [
     title: "Токен Telegram-бота в коде",
     looksFor: "строку вида 123456789:AA… — так выглядит токен бота",
     text: "Кто увидит код, тот получит полное управление ботом. Токен хранят отдельно от кода, а этот стоит перевыпустить у @BotFather.",
-    pattern: /\b\d{8,10}:[A-Za-z0-9_-]{35}\b/,
+    // Перед токеном — не цифра (в адресе API он идёт сразу после «bot»), после — не буква и не «-»
+    pattern: /(?:^|\D)(\d{8,10}:[A-Za-z0-9_-]{35})(?![\w-])/,
     secret: true,
-    mask: (match) => hide(match),
+    mask: (match, token) => match.replace(token, hide(token)),
   },
   {
     id: "openai-key",
@@ -257,7 +263,9 @@ const PROBLEM_RULES = [
     title: "Пароль в адресе подключения",
     looksFor: "адреса вида postgres://имя:пароль@сервер",
     text: "Пароль от базы спрятан внутри адреса подключения — и виден каждому, у кого есть код.",
-    pattern: /\b[a-z][a-z0-9+.-]*:\/\/[^\s:/@"']+:([^\s@/"']+)@/i,
+    // Имя может быть пустым (redis://:пароль@…); схема не длиннее 31 символа — иначе шаблон
+    // перебирает слишком много вариантов на длинных строках
+    pattern: /\b[a-z][a-z0-9+.-]{0,30}:\/\/[^\s:/@"']*:([^\s@/"']+)@/i,
     secret: true,
     mask: (match, password) => match.replace(`:${password}@`, `:${hide(password)}@`),
   },
@@ -266,7 +274,8 @@ const PROBLEM_RULES = [
     title: "Пароль или ключ прямо в коде",
     looksFor: "присваивания вида password = \"…\", api_key = \"…\", BOT_TOKEN = \"…\"",
     text: "Пароли и ключи в коде видит каждый, у кого есть файл или доступ к репозиторию. Их хранят на сервере отдельно от кода.",
-    pattern: /\b\w*(?:password|passwd|pwd|secret|api_?key|apikey|access_?key|token)\w*["']?\s*[:=]\s*["'](?!https?:|your|ваш|<)([^"'\s]{6,})["']/i,
+    // ["']?\]? — чтобы находить и app.config["SECRET_KEY"] = "…"
+    pattern: /\b\w*(?:password|passwd|pwd|secret|api_?key|apikey|access_?key|token)\w*["']?\]?\s*[:=]\s*["'](?!https?:|your|ваш|<)([^"'\s]{6,})["']/i,
     secret: true,
     mask: (match, value) => match.replace(value, hide(value)),
   },
@@ -289,7 +298,9 @@ const PROBLEM_RULES = [
     title: "Запрос к базе склеивается из текста",
     looksFor: "execute(f\"…\"), склейку запроса через + или %, query(`…${…}`)",
     text: "Если в запрос попадёт текст посетителя, через поле формы можно прочитать или стереть всю базу. Это классическая дыра — SQL-инъекция.",
-    pattern: /\b(?:execute|executemany|query|raw)\s*\(\s*f["']|\b(?:execute|query)\s*\(\s*["'][^"']*["']\s*(?:%|\+|\.format\()|\bquery\s*\(\s*`[^`]*\$\{/,
+    // Варианты: f-строка прямо в execute(); склейка через %, + или .format() внутри execute()/query();
+    // шаблон JS в query(); f-строка или шаблон JS с SQL, собранные отдельно от вызова
+    pattern: /\b(?:execute|executemany|query|raw)\s*\(\s*f["']|\b(?:execute|query)\s*\([^\n]*["']\s*(?:%|\+|\.format\()|\bquery\s*\(\s*`[^`]*\$\{|\bf["']\s*(?:SELECT|INSERT|UPDATE|DELETE)\b[^"'\n]*\{|`\s*(?:SELECT|INSERT|UPDATE|DELETE)\b[^`]*\$\{/,
   },
   {
     id: "eval-exec",
@@ -467,8 +478,13 @@ const NEED_RULES = [
 - Нет проблем — строка `Мешает запуску: явных проблем не нашёл` вместо блока.
 - Нет потребностей — `Понадобится: скажу после оценки`.
 - Есть пропущенные файлы — последней строкой `Пропущено: photo.png (не текстовый файл); big.log (больше 1 МБ)`.
-- Если текст длиннее 2000 символов, строки проблем убираются с конца, пока не влезет, и
-  вместо них — `…и ещё N находок`.
+- Имена файлов длиннее 40 символов укорачиваются: первые 26 символов, `…` и последние 13
+  (расширение остаётся). В строке «Проверено» — не больше 5 имён, дальше `и ещё N`. На странице
+  имена показываются полностью.
+- Текст должен влезть и в поле формы (2000 символов), и в адрес ссылки: после
+  `encodeURIComponent` — не больше 6000 символов. GitHub Pages отвечает ошибкой 414 на адреса
+  длиннее ~8 КБ, а русская буква в адресе занимает 6 символов (`%D0%BF`). Пока текст не влезает,
+  строки проблем убираются с конца, и вместо них — `…и ещё N находок`.
 
 ### 6.5. Примеры и эталонные отчёты
 
@@ -645,7 +661,8 @@ const MAX_FILE_SIZE = 1024 * 1024; // 1 МБ
 ## 10. Визуал (`code-check.css`)
 
 - `.checker` — сетка полей с промежутком, ширина не больше `48rem`, отступ сверху `2rem`.
-- Поле кода — во всю ширину, моноширинный шрифт (`ui-monospace, "Cascadia Mono", Consolas, monospace`),
+- Поле кода — во всю ширину, моноширинный шрифт (`ui-monospace, "Cascadia Mono", Consolas, monospace`)
+  размером не меньше 16 px (иначе iPhone увеличивает страницу при нажатии на поле),
   рамка `--color-muted` (граница поля отличается от фона хотя бы в 3 раза, как на лендинге),
   `--radius`, `resize: vertical`. Метки полей — жирные.
 - `.checker__hint` — `--color-muted`, мельче основного текста.
@@ -719,6 +736,21 @@ const MAX_FILE_SIZE = 1024 * 1024; // 1 МБ
 
    Плюс: на строке `DATABASE_URL = "postgres://admin:S3cretPass@db.example.com/shop"` находка
    **одна** (url-password), а показанная строка — `DATABASE_URL = "postgres://admin:S3c…@db.example.com/shop"`.
+
+   **Случаи, добавленные по финальному ревью:**
+
+   | Правило или тип | Срабатывает (и что показано) | Не срабатывает |
+   |---|---|---|
+   | telegram-token | токен внутри адреса API — `url = f"https://api.telegram.org/bot123…/sendMessage"`; токен, который кончается на `-` | — |
+   | url-password | `redis://:S3cretRedisPass@localhost:6379/0` → `redis://:S3c…@localhost:6379/0`, в том числе в `.env` в находке про localhost | — |
+   | secret-assignment | `app.config["SECRET_KEY"] = "dev-secret-key-123"` | `SECRET_KEY = os.environ["SECRET_KEY"]`, `if config["password"] == "admin123":` |
+   | sql-concat | ``cursor.execute("… name = '" + name + "'")``, ``db.execute("INSERT INTO t (a, b) VALUES ('" + a + "', 1)")``, `query = f"SELECT * FROM users WHERE id = {user_id}"`, ``const sql = `SELECT * FROM users WHERE id = ${id}`;`` | `title = f"Hello {name}"`, `document.querySelector("#" + id)` |
+   | тип проекта | `import React from "react"` + `import App from "./App"` → «Код на JavaScript», без «Сервера» | `import os` + `import numpy as np` по-прежнему «Скрипт на Python» |
+
+   И про длину: три файла `Новый текстовый документ (N).txt` со всеми правилами по 10 раз и
+   восемь файлов с именами по 220 символов плюс семь пропущенных с такими же именами — текст для
+   формы не длиннее 2000 символов, после `encodeURIComponent` не длиннее 6000, строка
+   «Пропущено» целая (`…; и ещё 2`).
 4. **Утечки.** После проверки каждого примера ни одна из строк `AAFakeTokenForDemoOnly`,
    `demoFakeKey`, `super-secret`, `qwerty123` не встречается ни в тексте `#report`, ни в
    расшифрованном `href` у `#send-report`.

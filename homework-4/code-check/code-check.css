@@ -27,7 +27,8 @@
   background: var(--color-surface);
   color: var(--color-text);
   font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
-  font-size: 0.9375rem;
+  /* Не меньше 16px: иначе iPhone увеличивает страницу, когда человек нажимает на поле */
+  font-size: 1rem;
   line-height: 1.5;
   resize: vertical;
 }

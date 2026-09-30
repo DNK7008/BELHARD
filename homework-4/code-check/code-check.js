@@ -44,14 +44,15 @@ const PROJECT_TYPES = [
   {
     id: "python-script",
     label: "Скрипт на Python",
-    pattern: /^\s*(?:import\s+\w+|from\s+[\w.]+\s+import\b|def\s+\w+\s*\()/m,
+    // «import X» без «from "…"» дальше по строке: import React from "react" — это JavaScript
+    pattern: /^\s*(?:import\s+\w+(?!.*\bfrom\s*["'])|from\s+[\w.]+\s+import\b|def\s+\w+\s*\()/m,
     server: true,
     web: false,
   },
   {
     id: "js-code",
     label: "Код на JavaScript",
-    pattern: /\bfunction\s+\w+\s*\(|\b(?:const|let)\s+\w+\s*=|=>/,
+    pattern: /\bfunction\s+\w+\s*\(|\b(?:const|let)\s+\w+\s*=|=>|^\s*import\s.*\bfrom\s*["']/m,
     server: false,
     web: false,
   },
@@ -74,9 +75,10 @@ const PROBLEM_RULES = [
     title: "Токен Telegram-бота в коде",
     looksFor: "строку вида 123456789:AA… — так выглядит токен бота",
     text: "Кто увидит код, тот получит полное управление ботом. Токен хранят отдельно от кода, а этот стоит перевыпустить у @BotFather.",
-    pattern: /\b\d{8,10}:[A-Za-z0-9_-]{35}\b/,
+    // Перед токеном — не цифра (в адресе API он идёт сразу после «bot»), после — не буква и не «-»
+    pattern: /(?:^|\D)(\d{8,10}:[A-Za-z0-9_-]{35})(?![\w-])/,
     secret: true,
-    mask: (match) => hide(match),
+    mask: (match, token) => match.replace(token, hide(token)),
   },
   {
     id: "openai-key",
@@ -92,7 +94,9 @@ const PROBLEM_RULES = [
     title: "Пароль в адресе подключения",
     looksFor: "адреса вида postgres://имя:пароль@сервер",
     text: "Пароль от базы спрятан внутри адреса подключения — и виден каждому, у кого есть код.",
-    pattern: /\b[a-z][a-z0-9+.-]*:\/\/[^\s:/@"']+:([^\s@/"']+)@/i,
+    // Имя может быть пустым (redis://:пароль@…); схема не длиннее 31 символа — иначе шаблон
+    // перебирает слишком много вариантов на длинных строках
+    pattern: /\b[a-z][a-z0-9+.-]{0,30}:\/\/[^\s:/@"']*:([^\s@/"']+)@/i,
     secret: true,
     mask: (match, password) => match.replace(`:${password}@`, `:${hide(password)}@`),
   },
@@ -101,7 +105,8 @@ const PROBLEM_RULES = [
     title: "Пароль или ключ прямо в коде",
     looksFor: "присваивания вида password = \"…\", api_key = \"…\", BOT_TOKEN = \"…\"",
     text: "Пароли и ключи в коде видит каждый, у кого есть файл или доступ к репозиторию. Их хранят на сервере отдельно от кода.",
-    pattern: /\b\w*(?:password|passwd|pwd|secret|api_?key|apikey|access_?key|token)\w*["']?\s*[:=]\s*["'](?!https?:|your|ваш|<)([^"'\s]{6,})["']/i,
+    // ["']?\]? — чтобы находить и app.config["SECRET_KEY"] = "…"
+    pattern: /\b\w*(?:password|passwd|pwd|secret|api_?key|apikey|access_?key|token)\w*["']?\]?\s*[:=]\s*["'](?!https?:|your|ваш|<)([^"'\s]{6,})["']/i,
     secret: true,
     mask: (match, value) => match.replace(value, hide(value)),
   },
@@ -124,7 +129,9 @@ const PROBLEM_RULES = [
     title: "Запрос к базе склеивается из текста",
     looksFor: "execute(f\"…\"), склейку запроса через + или %, query(`…${…}`)",
     text: "Если в запрос попадёт текст посетителя, через поле формы можно прочитать или стереть всю базу. Это классическая дыра — SQL-инъекция.",
-    pattern: /\b(?:execute|executemany|query|raw)\s*\(\s*f["']|\b(?:execute|query)\s*\(\s*["'][^"']*["']\s*(?:%|\+|\.format\()|\bquery\s*\(\s*`[^`]*\$\{/,
+    // Варианты: f-строка прямо в execute(); склейка через %, + или .format() внутри execute()/query();
+    // шаблон JS в query(); f-строка или шаблон JS с SQL, собранные отдельно от вызова
+    pattern: /\b(?:execute|executemany|query|raw)\s*\(\s*f["']|\b(?:execute|query)\s*\([^\n]*["']\s*(?:%|\+|\.format\()|\bquery\s*\(\s*`[^`]*\$\{|\bf["']\s*(?:SELECT|INSERT|UPDATE|DELETE)\b[^"'\n]*\{|`\s*(?:SELECT|INSERT|UPDATE|DELETE)\b[^`]*\$\{/,
   },
   {
     id: "eval-exec",
@@ -211,6 +218,10 @@ const MAX_PLACES_IN_TEXT = 5;
 const MAX_SKIPPED_IN_TEXT = 5;
 const MAX_SOURCES_IN_TEXT = 5; // двадцать длинных имён файлов заняли бы всё поле формы
 const MAX_TEXT_LENGTH = 2000; // maxlength поля «Что за проект» на лендинге
+// Длина текста в адресе ссылки. GitHub Pages отвечает ошибкой 414 на адреса длиннее ~8 КБ,
+// а русская буква в адресе занимает 6 символов (%D0%BF) — 2000 букв не влезли бы.
+const MAX_URL_TEXT = 6000;
+const MAX_NAME_IN_TEXT = 40;
 
 // Прячет найденный ключ: оставляет первые 3 символа, чтобы было понятно, о каком ключе речь
 function hide(value) {
@@ -373,12 +384,22 @@ function joinLimited(items, limit) {
   return rest > 0 ? `${shown}; и ещё ${rest}` : shown;
 }
 
+// Длинное имя файла для текста формы: начало, «…» и конец — чтобы осталось расширение
+function shortName(name) {
+  if (name.length <= MAX_NAME_IN_TEXT) {
+    return name;
+  }
+  return `${name.slice(0, 26)}…${name.slice(-13)}`;
+}
+
 // Текст для поля «Что за проект» в форме заявки. Кода и показанных строк в нём нет:
 // только заголовки находок и места — ключ не уйдёт в заявку даже замаскированным.
 function reportToText(report) {
-  const head = ["Отчёт проверки кода на сайте", `Проект: ${report.type.label}`, summaryText(report, MAX_SOURCES_IN_TEXT), ""];
+  // Имена файлов укорачиваем: текст должен влезть и в поле формы, и в адрес ссылки
+  const shortReport = { ...report, sourceNames: report.sourceNames.map(shortName) };
+  const head = ["Отчёт проверки кода на сайте", `Проект: ${report.type.label}`, summaryText(shortReport, MAX_SOURCES_IN_TEXT), ""];
   const problemLines = report.problems.map((problem) => {
-    const labels = problem.places.map((place) => placeLabel(place, report.multipleSources));
+    const labels = problem.places.map((place) => placeLabel({ ...place, source: shortName(place.source) }, report.multipleSources));
     return `- ${problem.title}: ${joinLimited(labels, MAX_PLACES_IN_TEXT)}`;
   });
   const needsLine = report.needs.length > 0
@@ -386,7 +407,7 @@ function reportToText(report) {
     : "Понадобится: скажу после оценки";
   const tail = ["", needsLine];
   if (report.skipped.length > 0) {
-    const skippedNames = report.skipped.map((file) => `${file.name} (${file.reason})`);
+    const skippedNames = report.skipped.map((file) => `${shortName(file.name)} (${file.reason})`);
     tail.push(`Пропущено: ${joinLimited(skippedNames, MAX_SKIPPED_IN_TEXT)}`);
   }
 
@@ -400,10 +421,11 @@ function reportToText(report) {
     return [...head, "Мешает запуску:", ...problemLines.slice(0, count), ...more, ...tail].join("\n");
   };
 
-  // Поле формы вмещает MAX_TEXT_LENGTH символов — убираем находки с конца, пока текст не влезет
+  // Текст должен влезть и в поле формы, и в адрес ссылки — убираем находки с конца, пока не влезет
+  const tooLong = (value) => value.length > MAX_TEXT_LENGTH || encodeURIComponent(value).length > MAX_URL_TEXT;
   let count = problemLines.length;
   let text = build(count);
-  while (text.length > MAX_TEXT_LENGTH && count > 0) {
+  while (tooLong(text) && count > 0) {
     count -= 1;
     text = build(count);
   }
