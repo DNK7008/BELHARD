@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <!-- Запрет на отправку данных: браузер заблокирует любой сетевой запрос и отправку формы
+       с этой страницы. Поэтому код технически не может покинуть браузер. Не убирать. -->
+  <meta http-equiv="Content-Security-Policy" content="connect-src 'none'; form-action 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Проверка кода — Запущу</title>
+  <meta name="description" content="Вставьте код, который написал AI, и узнайте, что мешает его запуску. Код не покидает ваш браузер.">
+  <!-- Как и лендинг: пока на сайте заглушки, страница закрыта от поисковиков -->
+  <meta name="robots" content="noindex">
+  <!-- Пустая иконка: браузер не запрашивает favicon.ico и не пишет 404 в консоль -->
+  <link rel="icon" href="data:,">
+  <!-- Цвета, кнопки и карточки — общие с лендингом; свои стили демо идут после них -->
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="code-check.css">
+  <!-- defer сохраняет порядок: сначала примеры, потом проверка, которая ими пользуется -->
+  <script src="examples.js" defer></script>
+  <script src="code-check.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="logo" href="../index.html">Запущу</a>
+      <a class="btn btn--small" href="../index.html#form">Оценить проект</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container">
+        <h1 class="section-title">Проверка кода</h1>
+        <p class="section-intro">Вставьте код, который написал ChatGPT или Claude, или выберите файлы — я покажу, что мешает запуску и что понадобится. Код не покидает ваш браузер: страница технически не может его отправить.</p>
+        <noscript>
+          <p class="section-intro">Для проверки нужен JavaScript. Если он выключен, просто <a href="../index.html#form">оставьте заявку</a> — я посмотрю код сам.</p>
+        </noscript>
+        <form id="checker" class="checker">
+          <div class="checker__field">
+            <label for="code">Код</label>
+            <!-- spellcheck="false": иначе браузер может отправить текст поля на проверку орфографии в облако.
+                 autocomplete="off": браузер не восстановит код после перезагрузки.
+                 autocorrect и autocapitalize: телефон не «исправит» код. -->
+            <textarea id="code" name="code" rows="12" maxlength="200000" placeholder="Вставьте сюда код из чата с AI" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
+          </div>
+          <div class="checker__field">
+            <label for="files">Или выберите файлы</label>
+            <!-- Без accept: на телефоне фильтр по расширениям прячет нужные файлы -->
+            <input id="files" name="files" type="file" multiple>
+            <p class="checker__hint">До 20 файлов, каждый до 1 МБ. Архив .zip сначала распакуйте.</p>
+          </div>
+          <div class="checker__examples">
+            <p class="checker__examples-title">Нет кода под рукой? Возьмите пример:</p>
+            <button class="example-button" type="button" data-example="bot">Telegram-бот</button>
+            <button class="example-button" type="button" data-example="flask">Сайт на Flask</button>
+            <button class="example-button" type="button" data-example="calc">Калькулятор на HTML</button>
+          </div>
+          <div class="checker__actions">
+            <button class="btn" type="submit">Проверить</button>
+            <button id="clear" class="link-button" type="button">Очистить</button>
+          </div>
+          <p id="check-status" class="checker__status" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>
+
+    <!-- Отчёт скрыт, пока нет проверки -->
+    <section id="report" class="section section--soft" hidden>
+      <div class="container">
+        <!-- tabindex="-1": на заголовок можно перенести фокус из скрипта -->
+        <h2 id="report-title" class="section-title" tabindex="-1">Результат проверки</h2>
+        <p id="report-summary" class="report__summary"></p>
+        <div id="report-body"></div>
+        <details class="report__rules">
+          <summary>Что я проверял</summary>
+          <ul id="rules-list"></ul>
+        </details>
+        <p class="report__note">Это первая автоматическая проверка, а не аудит: она ищет только типовые ошибки из списка выше. Точный ответ дам, когда посмотрю весь проект.</p>
+        <div class="report__actions">
+          <!-- Адрес ссылки с текстом отчёта собирает code-check.js -->
+          <a id="send-report" class="btn" href="../index.html#form">Отправить отчёт на бесплатную оценку</a>
+          <button id="check-another" class="link-button" type="button">Проверить другой код</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Контактов здесь нет: они заглушки, и каждая копия — лишнее место для правки -->
+  <footer class="site-footer">
+    <div class="container site-footer__inner">
+      <p>Запущу — запуск AI-проектов под ключ</p>
+      <a href="../index.html">← На главную</a>
+    </div>
+  </footer>
+</body>
+</html>
