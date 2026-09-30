@@ -433,8 +433,11 @@ quiz.addEventListener("submit", (event) => {
   event.preventDefault();
   renderPassport(readAnswers());
   passport.hidden = false;
-  // Фокус на заголовок: скринридер его прочитает, а телефон прокрутит страницу к паспорту
-  passportTitle.focus();
+  // Фокус на заголовок — его прочитает скринридер. Сам focus() прокручивает страницу, только
+  // если заголовок целиком за экраном, а на телефоне он часто виден краешком внизу. Поэтому
+  // прокручиваем к паспорту явно; плавность и её отключение даёт scroll-behavior из styles.css.
+  passportTitle.focus({ preventScroll: true });
+  passportTitle.scrollIntoView({ block: "start" });
 });
 
 restartButton.addEventListener("click", () => {
