@@ -106,6 +106,23 @@ a:hover {
   font-size: 0.9375rem;
 }
 
+/* Кнопка, которая выглядит как ссылка: второстепенное действие рядом с главным.
+   Общая для всех демо — не копируй её в их стили */
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  color: var(--color-accent-hover);
+}
+
 .site-header {
   border-bottom: 1px solid var(--color-border);
 }
@@ -269,8 +286,9 @@ a:hover {
   }
 }
 
-/* Строка со ссылкой на проверку кода — под карточками проблем */
-.problem-cta {
+/* Строки со ссылками на демо — под карточками проблем и под шагами */
+.problem-cta,
+.steps-cta {
   margin: 1.5rem 0 0;
   font-size: 1.125rem;
 }

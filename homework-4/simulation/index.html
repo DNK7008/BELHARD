@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Сам или со мной — Запущу</title>
+  <meta name="description" content="Пройдите запуск Telegram-бота по шагам — без риска что-то сломать — и сравните с запуском под ключ.">
+  <!-- Как и лендинг: пока на сайте заглушки, страница закрыта от поисковиков -->
+  <meta name="robots" content="noindex">
+  <!-- Пустая иконка: браузер не запрашивает favicon.ico и не пишет 404 в консоль -->
+  <link rel="icon" href="data:,">
+  <!-- Цвета, кнопки и карточки — общие с лендингом; свои стили демо идут после них -->
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="simulation.css">
+  <!-- defer: скрипты выполнятся по порядку, когда разметка уже готова. Сначала данные, потом логика -->
+  <script src="scenario.js" defer></script>
+  <script src="simulation.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="logo" href="../index.html">Запущу</a>
+      <a class="btn btn--small" href="../index.html#form">Оценить проект</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="section simulation">
+      <div class="container">
+        <h1 class="section-title">Сам или со мной</h1>
+        <p class="section-intro">Запуск Telegram-бота по шагам — того же, что в <a href="../code-check/index.html">примере проверки кода</a>. Это запись настоящего запуска, а не живой сервер: ничего не запускается и не ломается, а «…» в записи — пропущенные строки. Если решите запускать сами, путь и чеклист в конце пригодятся.</p>
+        <noscript>
+          <p class="section-intro">Для симуляции нужен JavaScript. Если он выключен, просто <a href="../index.html#form">оставьте заявку</a> — я расскажу, что нужно вашему проекту.</p>
+        </noscript>
+
+        <!-- Вкладки: видна панель выбранной, вторая скрыта атрибутом hidden. Переключает simulation.js -->
+        <div class="tabs" role="tablist" aria-label="Режим">
+          <button id="tab-self" class="tab" type="button" role="tab" aria-selected="true" aria-controls="panel-self" tabindex="0">Сам</button>
+          <button id="tab-with-me" class="tab" type="button" role="tab" aria-selected="false" aria-controls="panel-with-me" tabindex="-1">Со мной</button>
+        </div>
+
+        <div id="panel-self" class="tab-panel" role="tabpanel" aria-labelledby="tab-self">
+          <div class="sim-progress">
+            <p id="step-progress" class="sim-progress__text"></p>
+            <button id="restart" class="link-button" type="button">Начать сначала</button>
+          </div>
+          <!-- Содержимое шага рисует simulation.js из таблицы STEPS -->
+          <article class="card sim-step">
+            <!-- tabindex="-1": на заголовок переносится фокус после «Назад» и «Дальше» -->
+            <h2 id="step-title" class="sim-step__title" tabindex="-1"></h2>
+            <p id="step-why" class="sim-step__why"></p>
+            <div id="step-screens" class="screens"></div>
+            <p id="step-note" class="sim-step__note" hidden></p>
+            <div id="step-fork" class="fork" hidden></div>
+            <div id="step-terms" class="terms" hidden>
+              <h3 class="terms__title">Новые слова</h3>
+              <dl id="step-terms-list" class="terms__list"></dl>
+            </div>
+            <p class="sim-step__with-me"><strong>Со мной:</strong> <span id="step-with-me"></span></p>
+            <div class="sim-step__nav">
+              <button id="prev" class="link-button" type="button">← Назад</button>
+              <button id="next" class="btn" type="button">Дальше →</button>
+            </div>
+            <p id="step-hint" class="sim-step__hint" hidden>Чтобы идти дальше, выберите верный вариант.</p>
+          </article>
+        </div>
+
+        <div id="panel-with-me" class="tab-panel" role="tabpanel" aria-labelledby="tab-with-me" hidden>
+          <!-- Те же карточки с номерами, что в «Как это работает» на лендинге; заполняет simulation.js -->
+          <ol id="with-me-steps" class="cards steps"></ol>
+          <p id="with-me-total" class="with-me__total"></p>
+          <p><a href="#summary">К итогу и чеклисту ↓</a></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Итог виден всегда: кому нужен только чеклист, не придётся проходить все шаги -->
+    <section id="summary" class="section section--soft">
+      <div class="container">
+        <h2 id="summary-title" class="section-title" tabindex="-1">Итог</h2>
+        <p class="summary__intro">Сравнение посчитано по самой симуляции.</p>
+        <table class="compare">
+          <thead>
+            <tr>
+              <td></td>
+              <th scope="col">Сам</th>
+              <th scope="col">Со мной</th>
+            </tr>
+          </thead>
+          <!-- Строки с числами строит simulation.js из STEPS и WITH_ME -->
+          <tbody id="compare-body"></tbody>
+        </table>
+
+        <fieldset class="checklist">
+          <legend class="checklist__title">Что должно быть у запущенного проекта</legend>
+          <p class="checklist__hint">Отметьте, что у вашего проекта уже есть. Отметки остаются в вашем браузере.</p>
+          <!-- Пункты строит simulation.js из таблицы CHECKLIST -->
+          <ul id="checklist-items" class="checklist__items"></ul>
+        </fieldset>
+
+        <div class="summary__actions">
+          <!-- Адрес ссылки с текстом чеклиста собирает simulation.js -->
+          <a id="send-checklist" class="btn" href="../index.html#form">Отправить чеклист на бесплатную оценку</a>
+          <button id="copy-checklist" class="link-button" type="button">Скопировать</button>
+          <button id="print-checklist" class="link-button" type="button">Распечатать</button>
+        </div>
+        <p id="copy-status" class="summary__status" role="status"></p>
+        <p class="summary__note">Чеклист пригодится, даже если вы решите запускать сами.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Контактов здесь нет: они заглушки, и каждая копия — лишнее место для правки -->
+  <footer class="site-footer">
+    <div class="container site-footer__inner">
+      <p>Запущу — запуск AI-проектов под ключ</p>
+      <a href="../index.html">← На главную</a>
+    </div>
+  </footer>
+</body>
+</html>

@@ -78,22 +78,6 @@
   gap: 1rem 1.5rem;
 }
 
-/* Кнопка, которая выглядит как ссылка: второстепенное действие рядом с главным */
-.link-button {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--color-accent);
-  font: inherit;
-  font-weight: 600;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-.link-button:hover {
-  color: var(--color-accent-hover);
-}
-
 .checker__status {
   margin: 0;
   color: var(--color-error);
