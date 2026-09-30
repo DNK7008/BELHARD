@@ -1,0 +1,444 @@
+/* Стили демо «Сам или со мной». Цвета, кнопки и карточки — из ../styles.css. */
+
+/* ===== 1. Вкладки и шаг ===== */
+
+/* hidden должен прятать и блоки, которым ниже задан display: flex —
+   иначе flex перебивает браузерное правило для hidden */
+.simulation [hidden] {
+  display: none;
+}
+
+.tabs {
+  display: flex;
+  margin-top: 2rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab {
+  flex: 1;
+  min-height: 44px; /* удобно попасть пальцем */
+  padding: 0.75rem 1rem;
+  border: 0;
+  background: none;
+  color: var(--color-muted);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Выбранная вкладка подчёркнута тенью, а не рамкой: рамка сдвинула бы текст */
+.tab[aria-selected="true"] {
+  color: var(--color-text);
+  box-shadow: inset 0 -3px 0 var(--color-accent);
+}
+
+.tab-panel {
+  padding-top: 1.5rem;
+}
+
+.sim-progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.sim-progress__text {
+  margin: 0;
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+/* Части шага идут столбиком с равными промежутками; скрытые места не занимают */
+.sim-step {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.sim-step .sim-step__title {
+  margin: 0;
+  font-size: clamp(1.375rem, 3.5vw, 1.75rem);
+}
+
+/* В общих стилях абзацы карточки приглушены — а «зачем» и «со мной» здесь главные */
+.sim-step .sim-step__why {
+  color: var(--color-text);
+  font-size: 1.125rem;
+}
+
+.sim-step .sim-step__with-me {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+}
+
+.sim-step__nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* В общих стилях у закрытой кнопки курсор «ждите» — он про отправку формы.
+   Здесь кнопка ждёт не сервер, а ответ человека */
+.sim-step__nav .btn:disabled {
+  cursor: not-allowed;
+}
+
+.sim-step__nav .link-button:disabled {
+  color: var(--color-muted);
+  text-decoration: none;
+  cursor: default;
+}
+
+.sim-step .sim-step__hint {
+  font-size: 0.9375rem;
+}
+
+/* На телефоне карточке шага хватит отступа поменьше — останется место терминалу */
+@media (max-width: 480px) {
+  .sim-step {
+    padding: 1rem;
+  }
+}
+
+/* Развилка */
+.fork {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.fork .fork__question {
+  margin: 0;
+}
+
+.fork__options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.fork__option {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fork__option:hover {
+  border-color: var(--color-accent);
+}
+
+/* Выбранный вариант: рамка толще, а отступ меньше на столько же — текст не прыгает */
+.fork__option[aria-pressed="true"] {
+  padding: calc(0.75rem - 1px) calc(1rem - 1px);
+  border: 2px solid var(--color-accent);
+}
+
+.fork__result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.fork__result:empty {
+  display: none;
+}
+
+/* Неверный ответ не красный: тон спокойный, это урок, а не провал */
+.fork .fork__verdict {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.fork .fork__verdict--correct {
+  color: var(--color-accent);
+}
+
+.fork .fork__text {
+  color: var(--color-text);
+}
+
+/* Новые слова шага */
+.terms {
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.terms .terms__title {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.terms__list {
+  margin: 0;
+}
+
+.terms .terms__list dt {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.terms .terms__list dd + dt {
+  margin-top: 0.75rem;
+}
+
+/* Вкладка «Со мной» */
+.with-me__total {
+  margin: 1.5rem 0 0.5rem;
+  font-weight: 600;
+}
+
+/* ===== 2. Экраны ===== */
+.screens {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.screen {
+  margin: 0;
+}
+
+.screen__caption {
+  margin: 0 0 0.375rem;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+/* Терминал: светлый текст на тёмном — перевёрнутые общие цвета, новых нет.
+   Строки переносятся, а не прокручиваются вбок: на телефоне так удобнее */
+.terminal {
+  margin: 0;
+  padding: 1rem;
+  border-radius: var(--radius);
+  background: var(--color-text);
+  color: var(--color-border);
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.terminal__prompt {
+  color: var(--color-accent-soft);
+  font-weight: 700;
+}
+
+.terminal__command {
+  color: var(--color-bg);
+}
+
+@media (max-width: 480px) {
+  .terminal {
+    padding: 0.75rem;
+    font-size: 0.8125rem;
+  }
+}
+
+/* Панель хостинга: пары «название — значение» */
+.host-panel {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.host-panel .host-panel__title {
+  margin: 0 0 0.75rem;
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.host-panel__rows {
+  display: grid;
+  gap: 0.375rem;
+  margin: 0;
+}
+
+.host-panel__row {
+  display: grid;
+  grid-template-columns: minmax(6rem, 1fr) 2fr;
+  gap: 1rem;
+}
+
+.host-panel .host-panel__row dt {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.host-panel .host-panel__row dd {
+  margin: 0;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+/* Переписка: мои сообщения справа, бота — слева */
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+}
+
+.chat .chat__message {
+  max-width: 80%;
+  margin: 0;
+  padding: 0.5rem 0.875rem;
+  border-radius: var(--radius);
+  color: var(--color-text);
+}
+
+.chat .chat__message--me {
+  align-self: flex-end;
+  background: var(--color-accent-soft);
+}
+
+.chat .chat__message--bot {
+  align-self: flex-start;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+/* ===== 3. Итог и чеклист ===== */
+.summary__intro {
+  color: var(--color-muted);
+}
+
+.compare {
+  width: 100%;
+  max-width: 40rem;
+  border-collapse: collapse;
+  background: var(--color-surface);
+}
+
+/* overflow-wrap: normal — общее правило body разрешает рвать слово где угодно,
+   и таблица сжимает колонку до «Са / м». Здесь слова короткие, переносим только по пробелам */
+.compare th,
+.compare td {
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--color-border);
+  overflow-wrap: normal;
+  text-align: center;
+}
+
+.compare tbody th {
+  font-weight: 600;
+  text-align: left;
+}
+
+/* min-width: 0 — иначе fieldset не сужается уже своего содержимого и распирает страницу */
+.checklist {
+  min-width: 0;
+  margin: 2rem 0 0;
+  padding: 1.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+/* float переносит legend с рамки внутрь блока — там он выглядит как обычный заголовок */
+.checklist__title {
+  float: left;
+  width: 100%;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.checklist__hint {
+  clear: both;
+  margin: 0 0 1rem;
+  color: var(--color-muted);
+}
+
+.checklist__items {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.checklist__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-height: 44px;
+  padding: 0.5rem 0;
+  cursor: pointer;
+}
+
+.checklist__box {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0.2rem 0 0;
+  accent-color: var(--color-accent);
+}
+
+.summary__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.summary__status {
+  min-height: 1.6em;
+  margin: 0.75rem 0 0;
+  font-weight: 600;
+}
+
+.summary__note {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+/* ===== 4. Печать ===== */
+/* На бумагу — только чеклист: заголовок и пункты с отметками */
+@media print {
+  .site-header,
+  .site-footer,
+  .simulation,
+  #summary-title,
+  .summary__intro,
+  .compare,
+  .checklist__hint,
+  .summary__actions,
+  .summary__status,
+  .summary__note {
+    display: none;
+  }
+
+  #summary {
+    padding: 0;
+    background: none;
+  }
+
+  .checklist {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+}
