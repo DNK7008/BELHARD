@@ -323,3 +323,132 @@ function clearAnswers() {
     // Хранилище недоступно — очищать нечего
   }
 }
+
+// ===== 5. Страница =====
+const quiz = document.getElementById("quiz");
+const questionsBox = document.getElementById("questions");
+const passport = document.getElementById("passport");
+const passportTitle = document.getElementById("passport-title");
+const passportGroups = document.getElementById("passport-groups");
+const sendLink = document.getElementById("send-passport");
+const restartButton = document.getElementById("restart");
+
+// Создаёт элемент. Текст — через textContent, чтобы он никогда не превратился в разметку.
+function createNode(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) {
+    node.className = className;
+  }
+  if (text) {
+    node.textContent = text;
+  }
+  return node;
+}
+
+// Рисует вопросы из QUESTIONS: fieldset с легендой и радиокнопки-ответы
+function renderQuestions() {
+  QUESTIONS.forEach((question, index) => {
+    const fieldset = createNode("fieldset", "question");
+    fieldset.append(createNode("legend", "", `${index + 1}. ${question.text}`));
+    const answersBox = createNode("div", "answers");
+    for (const [value, text] of Object.entries(question.answers)) {
+      const label = createNode("label", "answer");
+      const input = document.createElement("input");
+      input.type = "radio";
+      input.name = question.id;
+      input.value = value;
+      // required на группе: браузер сам не даст показать паспорт с пропущенным вопросом
+      input.required = true;
+      label.append(input, text); // строка превращается в текстовый узел, не в разметку
+      answersBox.append(label);
+    }
+    fieldset.append(answersBox);
+    questionsBox.append(fieldset);
+  });
+}
+
+// Ответы, отмеченные сейчас на странице
+function readAnswers() {
+  const answers = {};
+  for (const question of QUESTIONS) {
+    // Для группы радиокнопок value — значение отмеченной или "", если не отмечена ни одна
+    const value = quiz.elements[question.id].value;
+    if (value) {
+      answers[question.id] = value;
+    }
+  }
+  return answers;
+}
+
+// Отмечает сохранённые ответы на странице
+function applyAnswers(answers) {
+  for (const [questionId, value] of Object.entries(answers)) {
+    quiz.elements[questionId].value = value;
+  }
+}
+
+function isComplete(answers) {
+  return QUESTIONS.every((question) => answers[question.id]);
+}
+
+// Рисует паспорт и обновляет ссылку «Отправить паспорт на бесплатную оценку»
+function renderPassport(answers) {
+  const items = buildPassport(answers);
+  passportGroups.replaceChildren();
+  for (const group of GROUPS) {
+    const groupItems = items.filter((item) => item.group === group.id);
+    if (groupItems.length === 0) {
+      continue; // пустую группу не показываем
+    }
+    const box = createNode("div", "passport__group");
+    box.append(createNode("h3", "", group.title));
+    const list = createNode("ul", "cards");
+    for (const item of groupItems) {
+      const card = createNode("li", "card");
+      card.append(
+        createNode("h4", "", item.title),
+        createNode("p", "", item.text),
+        createNode("p", "why", item.why)
+      );
+      list.append(card);
+    }
+    box.append(list);
+    passportGroups.append(box);
+  }
+  // Результат уходит в форму лендинга через адрес ссылки — сервер для этого не нужен
+  sendLink.href = `../index.html?project=${encodeURIComponent(passportToText(answers))}#form`;
+}
+
+quiz.addEventListener("change", () => {
+  const answers = readAnswers();
+  saveAnswers(answers);
+  // Паспорт уже на экране — пересчитываем, чтобы он не расходился с ответами
+  if (!passport.hidden) {
+    renderPassport(answers);
+  }
+});
+
+quiz.addEventListener("submit", (event) => {
+  // Сюда попадаем, только если браузер убедился, что отвечены все вопросы
+  event.preventDefault();
+  renderPassport(readAnswers());
+  passport.hidden = false;
+  // Фокус на заголовок: скринридер его прочитает, а телефон прокрутит страницу к паспорту
+  passportTitle.focus();
+});
+
+restartButton.addEventListener("click", () => {
+  clearAnswers();
+  quiz.reset();
+  passport.hidden = true;
+  quiz.querySelector("input").focus();
+});
+
+// Старт: рисуем вопросы, возвращаем сохранённые ответы и, если их хватает, сразу показываем паспорт
+renderQuestions();
+const savedAnswers = loadAnswers();
+applyAnswers(savedAnswers);
+if (isComplete(savedAnswers)) {
+  renderPassport(savedAnswers);
+  passport.hidden = false;
+}
