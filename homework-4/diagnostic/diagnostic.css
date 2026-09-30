@@ -1,0 +1,128 @@
+/* Стили демо «Что нужно вашему проекту». Цвета, кнопки и карточки — из ../styles.css. */
+
+/* ===== 1. Вопросы ===== */
+.quiz {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 48rem;
+  margin-top: 2rem;
+}
+
+.quiz__questions {
+  display: grid;
+  gap: 1.25rem;
+}
+
+/* Кнопка по ширине текста, а не на всю ширину формы */
+.quiz .btn {
+  justify-self: start;
+}
+
+.question {
+  /* fieldset по умолчанию не сжимается уже своего содержимого — на узком экране это даёт прокрутку */
+  min-width: 0;
+  margin: 0;
+  padding: 1.5rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+/* float переносит легенду с рамки fieldset внутрь карточки */
+.question legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 1rem;
+  padding: 0;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.answers {
+  clear: both; /* ответы начинаются под легендой, а не рядом с ней */
+  display: grid;
+  gap: 0.5rem;
+}
+
+.answer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 44px; /* удобно попасть пальцем */
+  padding: 0.625rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.answer input {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--color-accent);
+}
+
+/* Отмеченный ответ видно сразу, не вглядываясь в кружок */
+.answer:has(input:checked) {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+/* ===== 2. Паспорт ===== */
+/* У #passport не задаём display: иначе атрибут hidden перестанет его прятать */
+.passport__group {
+  margin-top: 2rem;
+}
+
+.passport__group h3 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+/* Сетка карточек из styles.css отступает сверху на 2rem — под заголовком группы хватит меньшего */
+.passport__group .cards {
+  margin-top: 1rem;
+}
+
+/* Заголовок пункта — как заголовок карточки на лендинге (.card h3) */
+.card h4 {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.card .why {
+  margin-top: 0.75rem;
+  font-size: 0.9375rem;
+}
+
+.passport__note {
+  margin: 2rem 0 0;
+  color: var(--color-muted);
+}
+
+.passport__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.5rem;
+  margin-top: 1.5rem;
+}
+
+/* Кнопка, которая выглядит как ссылка: второстепенное действие рядом с главным */
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  color: var(--color-accent-hover);
+}

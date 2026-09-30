@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Запущу — запуск кода от ChatGPT и Claude под ключ</title>
+  <meta name="description" content="Запущу ваш проект, написанный ChatGPT или Claude: сервер, домен, SSL и мониторинг. Оценка — бесплатно.">
+  <!-- Временно: контакты и ID формы — заглушки, поэтому страница закрыта от поисковиков -->
+  <meta name="robots" content="noindex">
+  <!-- Пустая иконка: браузер не запрашивает favicon.ico и не пишет 404 в консоль -->
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+  <!-- defer: скрипт выполнится, когда разметка уже готова -->
+  <script src="script.js" defer></script>
+</head>
+<body id="top">
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="logo" href="#top">Запущу</a>
+      <a class="btn btn--small" href="#form">Оценить проект</a>
+    </div>
+  </header>
+
+  <main>
+    <section id="hero" class="hero">
+      <div class="container">
+        <h1 class="hero__title">ChatGPT написал вам код. <span class="hero__accent">Я запущу его в интернете</span></h1>
+        <p class="hero__lead">Сервер, адрес сайта, защищённое соединение и присмотр за работой. Разбираться в серверах вам не придётся.</p>
+        <div class="hero__actions">
+          <a class="btn" href="#form">Получить бесплатную оценку</a>
+          <a class="hero__link" href="#steps">Как это работает</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="problem" class="section">
+      <div class="container">
+        <h2 class="section-title">Код есть, а сайта нет</h2>
+        <p class="section-intro">AI отлично пишет программы, но запускать их приходится самому. На этом шаге большинство проектов и останавливается.</p>
+        <ul class="cards">
+          <li class="card">
+            <h3>Непонятно, куда загрузить файлы</h3>
+            <p>Код лежит в чате или в архиве, а что с ним делать дальше — не сказано.</p>
+          </li>
+          <li class="card">
+            <h3>Инструкции от AI полны слов вроде Docker, SSH и DNS</h3>
+            <p>Каждое такое слово — ещё один вечер в поисковике, и не факт, что поможет.</p>
+          </li>
+          <li class="card">
+            <h3>Страшно, что всё сломается или взломают</h3>
+            <p>Непонятно, как проверить, что сайт защищён и не упадёт завтра.</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="included" class="section section--soft">
+      <div class="container">
+        <h2 class="section-title">Что вы получаете</h2>
+        <p class="section-intro">Всю техническую часть я беру на себя. Вот что будет у вашего проекта после запуска:</p>
+        <!-- Список определений: термин и его объяснение простыми словами -->
+        <dl class="cards">
+          <div class="card">
+            <dt>Сервер</dt>
+            <dd>Компьютер в дата-центре, на котором ваша программа работает круглосуточно.</dd>
+          </div>
+          <div class="card">
+            <dt>Домен</dt>
+            <dd>Адрес вида вашпроект.by, по которому сайт открывают люди.</dd>
+          </div>
+          <div class="card">
+            <dt>SSL-сертификат</dt>
+            <dd>Замочек в адресной строке: данные между посетителем и сайтом шифруются.</dd>
+          </div>
+          <div class="card">
+            <dt>Мониторинг</dt>
+            <dd>Если сайт перестанет открываться, я узнаю об этом первым.</dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+
+    <section id="steps" class="section">
+      <div class="container">
+        <h2 class="section-title">Как это работает</h2>
+        <ol class="cards steps">
+          <li class="card step">
+            <h3>Вы присылаете код</h3>
+            <p>Архив, ссылку на GitHub или просто чат с AI. И пару слов о том, что программа должна делать.</p>
+          </li>
+          <li class="card step">
+            <h3>Я оцениваю — бесплатно</h3>
+            <p>Смотрю код и называю срок и цену. Если что-то нужно поправить до запуска, скажу сразу.</p>
+          </li>
+          <li class="card step">
+            <h3>Вы получаете готовый сайт</h3>
+            <p>Ссылку, по которой проект открывается, и доступы, чтобы он был полностью вашим.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="faq" class="section">
+      <div class="container">
+        <h2 class="section-title">Частые вопросы</h2>
+        <!-- <details> раскрывается по клику сам, без JavaScript -->
+        <div class="faq">
+          <details class="faq__item">
+            <summary>Мне нужно что-то устанавливать?</summary>
+            <p>Нет. Всё настраивается на сервере, от вас нужен только код и ответы на пару вопросов.</p>
+          </details>
+          <details class="faq__item">
+            <summary>А если код не работает?</summary>
+            <p>Это видно на этапе оценки. Я скажу, что именно не так и что нужно поправить, — и можно ли сделать это вместе с запуском.</p>
+          </details>
+          <details class="faq__item">
+            <summary>Сколько это стоит?</summary>
+            <p>Зависит от проекта: простой бот и сервис с базой данных — разная работа. Поэтому сначала бесплатная оценка, и цену вы узнаёте до начала работы.</p>
+          </details>
+          <details class="faq__item">
+            <summary>Что будет после запуска?</summary>
+            <p>Мониторинг включён: если сайт упадёт, я узнаю первым. Постоянную поддержку — обновления и доработки — можно подключить отдельно.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section id="form" class="section section--soft">
+      <div class="container">
+        <h2 class="section-title">Бесплатная оценка проекта</h2>
+        <p class="section-intro">Расскажите коротко о проекте — я отвечу, сколько займёт запуск и сколько он стоит.</p>
+        <!-- Ссылка на index.html, а не на папку: по двойному клику ссылка на папку открывает список файлов -->
+        <p class="section-intro">Не знаете, что написать? <a href="diagnostic/index.html">Узнать за минуту, что нужно для запуска моего проекта</a> — ответ сам подставится в форму.</p>
+        <!-- [ВАШ_ID] — заглушка: без настоящего ID из Formspree отправка всегда заканчивается ошибкой -->
+        <form id="lead-form" class="lead-form" action="https://formspree.io/f/[ВАШ_ID]" method="POST">
+          <div class="field">
+            <label for="name">Как вас зовут</label>
+            <input id="name" name="name" type="text" required maxlength="80" autocomplete="name">
+          </div>
+          <div class="field">
+            <label for="contact">Telegram или email</label>
+            <input id="contact" name="contact" type="text" required maxlength="120" placeholder="@username или email">
+          </div>
+          <div class="field">
+            <label for="project">Что за проект</label>
+            <textarea id="project" name="project" rows="5" required maxlength="2000" placeholder="Например: Telegram-бот для записи клиентов, код написал ChatGPT"></textarea>
+          </div>
+          <button class="btn" type="submit">Получить оценку</button>
+          <p class="form-note">Отвечу в течение дня.</p>
+          <!-- Сюда script.js пишет результат отправки; aria-live зачитывает его скринридером -->
+          <p id="form-status" class="form-status" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container site-footer__inner">
+      <p>Запущу — запуск AI-проектов под ключ</p>
+      <ul class="site-footer__contacts">
+        <li><a href="https://t.me/USERNAME">@USERNAME</a></li>
+        <li><a href="mailto:you@example.com">you@example.com</a></li>
+      </ul>
+      <p>© 2026</p>
+    </div>
+  </footer>
+</body>
+</html>

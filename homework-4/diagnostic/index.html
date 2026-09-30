@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Что нужно вашему проекту — Запущу</title>
+  <meta name="description" content="Ответьте на шесть вопросов о проекте, который написал AI, и узнайте, что понадобится для его запуска.">
+  <!-- Как и лендинг: пока на сайте заглушки, страница закрыта от поисковиков -->
+  <meta name="robots" content="noindex">
+  <!-- Пустая иконка: браузер не запрашивает favicon.ico и не пишет 404 в консоль -->
+  <link rel="icon" href="data:,">
+  <!-- Цвета, кнопки и карточки — общие с лендингом; свои стили демо идут после них -->
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="diagnostic.css">
+  <!-- defer: скрипт выполнится, когда разметка уже готова -->
+  <script src="diagnostic.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="logo" href="../index.html">Запущу</a>
+      <a class="btn btn--small" href="../index.html#form">Оценить проект</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container">
+        <h1 class="section-title">Что нужно вашему проекту</h1>
+        <p class="section-intro">Шесть вопросов простыми словами — и вы увидите, что понадобится для запуска, а что нет. Ответы остаются в вашем браузере и никуда не отправляются.</p>
+        <noscript>
+          <p class="section-intro">Для диагностики нужен JavaScript. Если он выключен, просто <a href="../index.html#form">оставьте заявку</a> — я разберусь сам.</p>
+        </noscript>
+        <!-- Вопросы рисует diagnostic.js из таблицы QUESTIONS: тексты вопросов живут в одном месте -->
+        <form id="quiz" class="quiz">
+          <div id="questions" class="quiz__questions"></div>
+          <button class="btn" type="submit">Показать паспорт</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Паспорт скрыт, пока человек не ответит на все вопросы -->
+    <section id="passport" class="section section--soft" hidden>
+      <div class="container">
+        <!-- tabindex="-1": на заголовок можно перенести фокус из скрипта -->
+        <h2 id="passport-title" class="section-title" tabindex="-1">Паспорт запуска</h2>
+        <div id="passport-groups"></div>
+        <p class="passport__note">Это первая прикидка по правилам. Точный ответ дам, когда посмотрю код.</p>
+        <div class="passport__actions">
+          <!-- Адрес ссылки с текстом паспорта собирает diagnostic.js -->
+          <a id="send-passport" class="btn" href="../index.html#form">Отправить паспорт на бесплатную оценку</a>
+          <button id="restart" class="link-button" type="button">Пройти заново</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Контактов здесь нет: они заглушки, и каждая копия — лишнее место для правки -->
+  <footer class="site-footer">
+    <div class="container site-footer__inner">
+      <p>Запущу — запуск AI-проектов под ключ</p>
+      <a href="../index.html">← На главную</a>
+    </div>
+  </footer>
+</body>
+</html>
