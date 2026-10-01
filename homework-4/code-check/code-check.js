@@ -85,7 +85,17 @@ const PROBLEM_RULES = [
     title: "Ключ OpenAI в коде",
     looksFor: "строку, которая начинается с sk- — так выглядит ключ OpenAI",
     text: "По этому ключу с вашего счёта в OpenAI могут тратить деньги. Попавший в код ключ отзывают и выпускают новый.",
-    pattern: /\bsk-[A-Za-z0-9_-]{20,}/,
+    // (?!ant-) — ключи Anthropic тоже начинаются с sk-, для них своё правило ниже
+    pattern: /\bsk-(?!ant-)[A-Za-z0-9_-]{20,}/,
+    secret: true,
+    mask: (match) => hide(match),
+  },
+  {
+    id: "anthropic-key",
+    title: "Ключ Anthropic (Claude) в коде",
+    looksFor: "строку, которая начинается с sk-ant- — так выглядит ключ Anthropic",
+    text: "По этому ключу с вашего счёта в Anthropic могут тратить деньги на запросы к Claude. Попавший в код ключ отзывают в консоли Anthropic и выпускают новый.",
+    pattern: /\bsk-ant-[A-Za-z0-9_-]{20,}/,
     secret: true,
     mask: (match) => hide(match),
   },
